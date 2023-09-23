@@ -52,13 +52,17 @@ private:
   // 重启串口
   void reopenPort();
 
-  //- io互斥锁
+  // io互斥锁
+  // 用来保护io_context_的互斥锁
+  // 该互斥锁仅在serial_driver中使用
+  // 功能是保证串口通信不会同时进行读写
+  // 因为串口通信使用的是同一块内存，所以需要保证读写不会同时进行
   std::unique_ptr<IoContext> owned_ctx_;
 
-  //- 串口名称
+  // 串口名称
   std::string device_name_;
 
-  //- serial driver配置参数和serialDriver
+  // serial driver配置参数和serialDriver
   
   // 用来配置串口的参数
   std::unique_ptr<drivers::serial_driver::SerialPortConfig> device_config_;
@@ -87,7 +91,8 @@ private:
   rclcpp::TimerBase::SharedPtr debug_mTimer_;
   void debugMsgCallback();
 
-  //
+  // 串口通信线程
+  // 为了异步地接收数据，这样主线程可以继续执行其他任务而不会被 I/O 操作（如从串口读取数据）所阻塞
   std::thread receive_thread_;
 };
 }  // namespace rm_serial_driver

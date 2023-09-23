@@ -72,30 +72,11 @@ RMSerialDriver::RMSerialDriver(const rclcpp::NodeOptions & options)
 
   if(debug_mode_)
   {
+    // 创建定时器，每10ms发布一次数据
     debug_mTimer_ = this->create_wall_timer(std::chrono::milliseconds(10),std::bind(&RMSerialDriver::debugMsgCallback,this));
   }
   // 创建延迟发布器，发布延迟，名称是/latency，类型是std_msgs::msg::Float64，用来发布延迟信息
   latency_pub_ = this->create_publisher<std_msgs::msg::Float64>("/latency", 10);
-}
-
-// debug模式下，每10ms发布一次数据
-void RMSerialDriver::debugMsgCallback()
-{
-  static uint32_t packet_id = 0;
-  try {
-    SendPacket packet;
-    packet.header = 0xA5;
-    packet.packat_id = packet_id++;
-    packet.suggest_fire = 0;
-    packet.offset_yaw = 0.1;
-    packet.offset_pitch = 1.1;
-    crc16::Append_CRC16_Check_Sum(reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
-    std::vector<uint8_t> data = toVector(packet);
-    serial_driver_->port()->send(data);
-  } catch (const std::exception & ex) {
-    RCLCPP_ERROR(get_logger(), "Error while sending data: %s", ex.what());
-    reopenPort();
-  }
 }
 
 RMSerialDriver::~RMSerialDriver()
@@ -119,9 +100,14 @@ RMSerialDriver::~RMSerialDriver()
 //- 接受data数据
 void RMSerialDriver::receiveData()
 {
+  // header用于接收针头，每次接收一个字节，判断是否为针头
+  // header(1)中的数字1表示header向量的初始大小为1，即它初始化为包含一个字节的空间
   std::vector<uint8_t> header(1);
+  // 对比std::vector<uint8_t> data(sizeof(ReceivePacket));和以下代码
+  // std::vector<uint8_t> data(sizeof(ReceivePacket));：这直接初始化了一个向量，其大小为sizeof(ReceivePacket)，并将所有元素初始化为0。
+  // 以下代码：这只是初始化了一个空向量，其大小为0，然后调用reserve()函数，将向量的容量设置为sizeof(ReceivePacket)，此时向量的大小仍为0。
   std::vector<uint8_t> data;
-  data.reserve(sizeof(ReceivePacket));
+  data.reserve(sizeof(ReceivePacket) - 1);
 
   // 如果串口打开，就一直循环，接收数据
   while (rclcpp::ok()) {
@@ -193,6 +179,9 @@ void RMSerialDriver::receiveData()
 void RMSerialDriver::sendData(const auto_aim_interfaces::msg::Target::SharedPtr msg)
 {
   // 发送数据
+  // 当你在函数内部使用static变量时，该变量在函数首次调用时进行初始化。
+  // 在之后的调用中，它将保持其上一次赋予的值，不会再次初始化。
+  // static变量的使用在函数中常常用作计数器或其他需要在函数调用之间保持状态的目的。
   static uint32_t packet_id = 0;
   try {
     // 创建发送数据包
@@ -215,8 +204,10 @@ void RMSerialDriver::sendData(const auto_aim_interfaces::msg::Target::SharedPtr 
     serial_driver_->port()->send(data);
 
     // 创建延迟消息
+    // 延迟消息的作用是监控代码性能
     std_msgs::msg::Float64 latency;
     // 计算延迟
+    // 延迟是从接收到装甲板信息，到发送数据的时间差
     latency.data = (this->now() - msg->header.stamp).seconds() * 1000.0;
     // 在终端打印延迟的信息
     RCLCPP_DEBUG_STREAM(get_logger(), "Total latency: " + std::to_string(latency.data) + "ms");
@@ -234,6 +225,7 @@ void RMSerialDriver::getParams()
 {
   // 获取debug模式，如果是true，就打印debug信息
   debug_mode_ = this->declare_parameter("debug_mode", false);
+  RCLCPP_INFO(get_logger(), "Debug mode: %s", debug_mode_ ? "true" : "false");
 
   using FlowControl = drivers::serial_driver::FlowControl;
   using Parity = drivers::serial_driver::Parity;
@@ -371,6 +363,26 @@ void RMSerialDriver::reopenPort()
       // 重新打开串口
       reopenPort();
     }
+  }
+}
+
+// debug模式下，每10ms发布一次数据
+void RMSerialDriver::debugMsgCallback()
+{
+  static uint32_t packet_id = 0;
+  try {
+    SendPacket packet;
+    packet.header = 0xA5;
+    packet.packat_id = packet_id++;
+    packet.suggest_fire = 0;
+    packet.offset_yaw = 0.1;
+    packet.offset_pitch = 1.1;
+    crc16::Append_CRC16_Check_Sum(reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
+    std::vector<uint8_t> data = toVector(packet);
+    serial_driver_->port()->send(data);
+  } catch (const std::exception & ex) {
+    RCLCPP_ERROR(get_logger(), "Error while sending data: %s", ex.what());
+    reopenPort();
   }
 }
 
