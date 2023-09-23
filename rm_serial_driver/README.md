@@ -182,3 +182,7 @@ RoboMaster 串口通信驱动模块
 - `RmSerialDriver`
 
     定义串口通信驱动类
+
+## Graph
+
+![graph](./image/rm_serial_driver_graph.jpg)
