@@ -13,13 +13,19 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(this->get_logger(), "Starting TrackerNode!");
 
   // Maximum allowable armor distance in the XOY plane
+  // 获取参数，XOY平面内最大允许的装甲版距离
   max_armor_distance_ = this->declare_parameter("max_armor_distance", 10.0);
 
   // Tracker
+  // 获取参数，最大匹配距离
   double max_match_distance = this->declare_parameter("tracker.max_match_distance", 0.15);
+  // 获取参数，最大匹配角度差
   double max_match_yaw_diff = this->declare_parameter("tracker.max_match_yaw_diff", 1.0);
+  // 创建Tracker对象
   tracker_ = std::make_unique<Tracker>(max_match_distance, max_match_yaw_diff);
+  // 获取参数，追踪阈值
   tracker_->tracking_thres = this->declare_parameter("tracker.tracking_thres", 5);
+  // 获取参数，丢失阈值
   lost_time_thres_ = this->declare_parameter("tracker.lost_time_thres", 0.3);
 
   // EKF

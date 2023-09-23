@@ -35,6 +35,7 @@ using tf2_filter = tf2_ros::MessageFilter<auto_aim_interfaces::msg::Armors>;
 class ArmorTrackerNode : public rclcpp::Node
 {
 public:
+  // 构造函数
   explicit ArmorTrackerNode(const rclcpp::NodeOptions & options);
 
 private:

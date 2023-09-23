@@ -22,25 +22,49 @@
 namespace rm_auto_aim
 {
 
+// 用于标记目标单位拥有的装甲板的数量
+// NORMAL_4: 4个装甲板
+// BALANCE_2: 2个装甲板，用于平衡车
+// OUTPOST_3: 3个装甲板，用于前哨站
 enum class ArmorsNum { NORMAL_4 = 4, BALANCE_2 = 2, OUTPOST_3 = 3 };
 
 class Tracker
 {
 public:
+  /**
+   * @brief Tracker类的构造函数
+   * @param max_match_distance 最大匹配距离
+   * @param max_match_yaw_diff 最大匹配偏航角差
+   */
   Tracker(double max_match_distance, double max_match_yaw_diff);
 
   using Armors = auto_aim_interfaces::msg::Armors;
   using Armor = auto_aim_interfaces::msg::Armor;
 
+  /**
+   * @brief 初始化追踪器，在追踪器为LOST状态时调用
+   * @param armors_msg 装甲板信息，当装甲板信息为空时，不进行初始化
+   */
   void init(const Armors::SharedPtr & armors_msg);
 
+  /**
+   * @brief 更新追踪器，在追踪器不为LOST状态时调用
+   * @param armors_msg 装甲板信息，当装甲板信息为空时，不进行更新
+   */
   void update(const Armors::SharedPtr & armors_msg);
 
+  // 扩展卡尔曼滤波器
   ExtendedKalmanFilter ekf;
 
   int tracking_thres;
   int lost_thres;
 
+  // 用于标记追踪状态
+  // LOST: 丢失目标
+  // DETECTING: 正在检测目标
+  // TRACKING: 正在追踪目标
+  // TEMP_LOST: 临时丢失目标
+  // tracker_state为State类型
   enum State
   {
     LOST,
@@ -49,8 +73,11 @@ public:
     TEMP_LOST,
   } tracker_state;
 
+  // 用于标记目标装甲板的id信息
   std::string tracked_id;
+  // 用于存储追踪的装甲板信息
   Armor tracked_armor;
+  // 用于标记目标单位拥有的装甲板的数量
   ArmorsNum tracked_armors_num;
 
   double info_position_diff;
@@ -64,17 +91,37 @@ public:
   double dz, another_r;
 
 private:
+  /**
+   * @brief 初始化卡尔曼滤波器，在init函数中调用
+   * @param a 装甲板信息
+   */
   void initEKF(const Armor & a);
 
+  /**
+   * @brief 更新目标装甲板数量，在init函数和handleArmorJump函数中调用
+   * @param a 装甲板信息
+   */
   void updateArmorsNum(const Armor & a);
 
   void handleArmorJump(const Armor & a);
 
+  /**
+   * @brief 此函数用于将四元数转换为偏航角
+   * @param q 四元数
+   * @return yaw值，偏航角
+   */
   double orientationToYaw(const geometry_msgs::msg::Quaternion & q);
 
+  /**
+   * @brief 此函数通过状态向量，计算装甲板的位置
+   * @param x 状态向量，为9维向量
+   * @return 装甲板的位置，为3维向量
+   */
   Eigen::Vector3d getArmorPositionFromState(const Eigen::VectorXd & x);
 
+  // 最大匹配距离
   double max_match_distance_;
+  // 最大匹配偏航角差
   double max_match_yaw_diff_;
 
   int detect_count_;
