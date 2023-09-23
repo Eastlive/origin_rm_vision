@@ -1,0 +1,62 @@
+/armor_detector:
+  ros__parameters:
+    debug: true
+    detect_color: 1
+    min_lightness: 120
+    classifier_threshold: 0.8
+    ignore_classes: ["negative"]
+
+    light:
+      max_angle: 40.0
+      max_ratio: 0.4
+      min_ratio: 0.1
+
+    armor:
+      max_angle: 35.0
+      max_center_ratio: 1.6
+      min_center_ratio: 0.4
+      min_light_ratio: 0.8
+      max_large_center_distance: 5.0
+      min_large_center_distance: 3.2
+      max_small_center_distance: 3.2
+      min_small_center_distance: 0.8
+# /armor_detector:
+#   ros__parameters:
+#     debug: true
+#     binary_thres: 80
+
+#     light.min_ratio: 0.1
+#     armor.min_light_ratio: 0.8
+
+#     classifier_threshold: 0.8
+#     ignore_classes: ["negative"]
+
+/armor_tracker:
+  ros__parameters:
+    target_frame: gimbal_odom
+    max_armor_distance: 10.0
+
+    ekf:
+      sigma2_q_xyz: 0.05
+      sigma2_q_yaw: 5.0
+      sigma2_q_r: 80.0
+
+      r_xyz_factor: 1e-4
+      r_yaw: 5e-3
+
+    tracker:
+      max_match_distance: 0.7
+      max_match_yaw_diff: 1.0
+
+      tracking_thres: 5
+      lost_time_thres: 1.0
+
+    trajectory:
+      max_iter : 10 
+      stop_error : 0.001
+      R_K_iter : 50
+      init_bullet_speed : 26.5
+      is_hero: false
+      static_offset:
+        yaw : 0.5
+        pitch : 0.0
