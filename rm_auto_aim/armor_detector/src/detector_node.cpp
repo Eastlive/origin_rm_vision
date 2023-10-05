@@ -139,6 +139,8 @@ ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions & options)
 
 }
 
+/// @brief 图像回调函数，用于检测图像中的装甲板并估计它们的位姿
+/// @param img_msg 图像消息
 void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr img_msg)
 {
   // 调用detectArmors函数对图像中的装甲板进行检测，返回一个包含检测到的装甲板的列表
@@ -279,29 +281,41 @@ std::unique_ptr<Detector> ArmorDetectorNode::initDetector()
   return detector;
 }
 
+/// @brief 传入的图像消息中检测装甲板
+/// @param img_msg 图像消息
+/// @return 检测到的装甲板列表
 std::vector<Armor> ArmorDetectorNode::detectArmors(
   const sensor_msgs::msg::Image::ConstSharedPtr & img_msg)
 {
   // Convert ROS img to cv::Mat
+  // 将ROS的图像消息转换为OpenCV的cv::Mat图像格式
   auto img = cv_bridge::toCvShare(img_msg, "rgb8")->image;
 
   // Update params
-  detector_->binary_thres = get_parameter("binary_thres").as_int();
+  // 更新参数
+  // 从ROS节点的参数中获取并更新detector_的binary_thres属性
+  detector_->binary_thres = get_parameter("binary_thres").as_int(); // 二值化阈值
   //detector_->detect_color = get_parameter("detect_color").as_int();
-  detector_->classifier->threshold = get_parameter("classifier_threshold").as_double();
+  // 从ROS节点的参数中获取并更新detector_的classifier子对象的threshold属性
+  detector_->classifier->threshold = get_parameter("classifier_threshold").as_double(); // 分类器置信度阈值
 
+  // 装甲板检测，并获取检测到的装甲板列表
   auto armors = detector_->detect(img);
 
+  // 计算从图像消息的时间戳到现在的延迟，并将其记录到日志中
   auto final_time = this->now();
   auto latency = (final_time - img_msg->header.stamp).seconds() * 1000;
   RCLCPP_DEBUG_STREAM(this->get_logger(), "Latency: " << latency << "ms");
 
   // Publish debug info
-  if (debug_) {
+  // 发布debug信息
+  if (debug_) { // 如果开启了debug调试模式
+    // 发布二值化图像
     binary_img_pub_.publish(
       cv_bridge::CvImage(img_msg->header, "mono8", detector_->binary_img).toImageMsg());
 
     // Sort lights and armors data by x coordinate
+    // 按x坐标对灯条和装甲板数据进行排序
     std::sort(
       detector_->debug_lights.data.begin(), detector_->debug_lights.data.end(),
       [](const auto & l1, const auto & l2) {return l1.center_x < l2.center_x;});
@@ -309,27 +323,34 @@ std::vector<Armor> ArmorDetectorNode::detectArmors(
       detector_->debug_armors.data.begin(), detector_->debug_armors.data.end(),
       [](const auto & a1, const auto & a2) {return a1.center_x < a2.center_x;});
 
+    // 发布灯条调试信息和装甲板调试信息
     lights_data_pub_->publish(detector_->debug_lights);
     armors_data_pub_->publish(detector_->debug_armors);
 
+    // 如果检测到了装甲板，获取所有装甲板上的数字的图像，并发布它
     if (!armors.empty()) {
       auto all_num_img = detector_->getAllNumbersImage();
       number_img_pub_.publish(
         *cv_bridge::CvImage(img_msg->header, "mono8", all_num_img).toImageMsg());
     }
 
+    // 将检测结果绘制到图像上
     detector_->drawResults(img);
     // Draw camera center
+    // 绘制相机中心
     cv::circle(img, cam_center_, 5, cv::Scalar(255, 0, 0), 2);
     // Draw latency
+    // 绘制延迟
     std::stringstream latency_ss;
     latency_ss << "Latency: " << std::fixed << std::setprecision(2) << latency << "ms";
     auto latency_s = latency_ss.str();
     cv::putText(
       img, latency_s, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0), 2);
+    // 发布带有检测结果的图像
     result_img_pub_.publish(cv_bridge::CvImage(img_msg->header, "rgb8", img).toImageMsg());
   }
 
+  // 返回检测到的装甲板列表
   return armors;
 }
 
@@ -362,11 +383,16 @@ void ArmorDetectorNode::destroyDebugPublishers()
   result_img_pub_.shutdown();
 }
 
+/// @brief 发布可视化标记
 void ArmorDetectorNode::publishMarkers()
 {
+  // 发布可视化标记
   using Marker = visualization_msgs::msg::Marker;
+  // 如果检测到了装甲板，将动作设置为ADD，否则设置为DELETE
   armor_marker_.action = armors_msg_.armors.empty() ? Marker::DELETE : Marker::ADD;
+  // 将装甲板框的信息添加到标记数组中
   marker_array_.markers.emplace_back(armor_marker_);
+  // 发布标记数组
   marker_pub_->publish(marker_array_);
 }
 
