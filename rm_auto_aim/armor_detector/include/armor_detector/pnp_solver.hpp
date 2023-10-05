@@ -29,10 +29,13 @@ public:
   float calculateDistanceToCenter(const cv::Point2f & image_point);
 
 private:
+  // 3x3相机内参矩阵
   cv::Mat camera_matrix_;
+  // 镜头畸变系数
   cv::Mat dist_coeffs_;
 
   // Unit: mm
+  // 定义标准装甲板尺寸
   static constexpr float SMALL_ARMOR_WIDTH = 135;
   static constexpr float SMALL_ARMOR_HEIGHT = 55;
   static constexpr float LARGE_ARMOR_WIDTH = 225;

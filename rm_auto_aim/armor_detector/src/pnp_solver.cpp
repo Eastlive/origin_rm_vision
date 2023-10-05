@@ -7,6 +7,10 @@
 
 namespace rm_auto_aim
 {
+// PnP解算构造函数
+// 初始化：
+// 1. camera_matrix 3x3相机内参矩阵
+// 2. dist_coeffs 镜头畸变系数
 PnPSolver::PnPSolver(
   const std::array<double, 9> & camera_matrix, const std::vector<double> & dist_coeffs)
 : camera_matrix_(cv::Mat(3, 3, CV_64F, const_cast<double *>(camera_matrix.data())).clone()),
