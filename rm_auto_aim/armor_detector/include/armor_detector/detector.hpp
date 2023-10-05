@@ -90,7 +90,15 @@ public:
   std::vector<Armor> matchLights(const std::vector<Light> & lights);
 
   // 用来Debug的函数
+  /**
+   * @brief Debug，获取识别到的装甲板所有数字的图像
+   * @return 所有数字的图像
+   */
   cv::Mat getAllNumbersImage();
+  /**
+   * @brief Debug，将识别到的装甲板绘制到图像上
+   * @param img 背景图像
+   */
   void drawResults(cv::Mat & img);
 
   // 用来存放二值化阈值
@@ -112,7 +120,7 @@ public:
 
 private:
   /**
-   * @brief 判断两个灯条是否符合装甲板的要求
+   * @brief 判断一个灯条是否符合要求
    * @param possible_light 可能的灯条
    * @return 是否符合灯条要求
    */
@@ -136,7 +144,9 @@ private:
    */
   ArmorType isArmor(const Light & light_1, const Light & light_2);
 
+  // 用来存放整个检测器的灯条容器
   std::vector<Light> lights_;
+  // 用来存放整个检测器的装甲板容器
   std::vector<Armor> armors_;
 };
 

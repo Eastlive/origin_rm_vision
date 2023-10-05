@@ -19,12 +19,19 @@
 
 namespace rm_auto_aim
 {
+// 检测器的构造函数
+// 初始化：
+// 1. 二值化阈值
+// 2. 装甲板颜色
+// 3. 灯条参数
+// 4. 装甲板参数
 Detector::Detector(
   const int & bin_thres, const int & color, const LightParams & l, const ArmorParams & a)
 : binary_thres(bin_thres), detect_color(color), l(l), a(a)
 {
 }
 
+// 对图像进行装甲板检测
 std::vector<Armor> Detector::detect(const cv::Mat & input)
 {
   // 预处理图像
@@ -46,6 +53,7 @@ std::vector<Armor> Detector::detect(const cv::Mat & input)
   return armors_;
 }
 
+// 对图像进行预处理
 cv::Mat Detector::preprocessImage(const cv::Mat & rgb_img)
 {
   // 将图像转换为灰度图像
@@ -60,6 +68,7 @@ cv::Mat Detector::preprocessImage(const cv::Mat & rgb_img)
   return binary_img;
 }
 
+// 寻找符合要求的灯条
 std::vector<Light> Detector::findLights(const cv::Mat & rbg_img, const cv::Mat & binary_img)
 {
   using std::vector;
@@ -120,6 +129,7 @@ std::vector<Light> Detector::findLights(const cv::Mat & rbg_img, const cv::Mat &
   return lights;
 }
 
+// 判断灯条是否符合要求
 bool Detector::isLight(const Light & light)
 {
   // 灯条的短边长 / 长边长
@@ -143,6 +153,7 @@ bool Detector::isLight(const Light & light)
   return is_light;
 }
 
+// 匹配灯条，寻找装甲板
 std::vector<Armor> Detector::matchLights(const std::vector<Light> & lights)
 {
   // 创建装甲板容器
@@ -203,6 +214,7 @@ bool Detector::containLight(
   return false;
 }
 
+// 判断两个灯条是否符合装甲板的要求
 ArmorType Detector::isArmor(const Light & light_1, const Light & light_2)
 {
   // 计算两个灯条的长度比 (短边长 / 长边长)
@@ -253,38 +265,56 @@ ArmorType Detector::isArmor(const Light & light_1, const Light & light_2)
   return type;
 }
 
+// Debug，获取所有数字图片
 cv::Mat Detector::getAllNumbersImage()
 {
   if (armors_.empty()) {
+    // 如果装甲板为空，返回空的数字图片
     return cv::Mat(cv::Size(20, 28), CV_8UC1);
   } else {
+    // 创建数字图片容器
     std::vector<cv::Mat> number_imgs;
+    // 预留空间
     number_imgs.reserve(armors_.size());
+    // 遍历所有装甲板，将数字图片存入数字图片容器
     for (auto & armor : armors_) {
       number_imgs.emplace_back(armor.number_img);
     }
+    // 创建所有数字图片
     cv::Mat all_num_img;
+    // 将所有数字图片拼接在一起
     cv::vconcat(number_imgs, all_num_img);
+    // 返回所有数字图片
     return all_num_img;
   }
 }
+
+// Debug，将识别到的数字绘制在图像上
 void Detector::drawResults(cv::Mat & img)
 {
   // Draw Lights
+  // 绘制灯条图案
   for (const auto & light : lights_) {
+    // 绘制灯条的顶点
     cv::circle(img, light.top, 3, cv::Scalar(255, 255, 255), 1);
+    // 绘制灯条的底点
     cv::circle(img, light.bottom, 3, cv::Scalar(255, 255, 255), 1);
+    // 判断灯条的颜色，绘制不同颜色的灯条
     auto line_color = light.color == RED ? cv::Scalar(255, 255, 0) : cv::Scalar(255, 0, 255);
+    // 绘制灯条
     cv::line(img, light.top, light.bottom, line_color, 1);
   }
 
   // Draw armors
+  // 绘制装甲板图案
   for (const auto & armor : armors_) {
+    // 绘制的装甲板图像为X的图案
     cv::line(img, armor.left_light.top, armor.right_light.bottom, cv::Scalar(0, 255, 0), 2);
     cv::line(img, armor.left_light.bottom, armor.right_light.top, cv::Scalar(0, 255, 0), 2);
   }
 
   // Show numbers and confidence
+  // 显示数字和置信度
   for (const auto & armor : armors_) {
     cv::putText(
       img, armor.classfication_result, armor.left_light.top, cv::FONT_HERSHEY_SIMPLEX, 0.8,
