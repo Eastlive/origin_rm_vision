@@ -141,32 +141,44 @@ ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions & options)
 
 void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr img_msg)
 {
+  // 调用detectArmors函数对图像中的装甲板进行检测，返回一个包含检测到的装甲板的列表
   auto armors = detectArmors(img_msg);
 
-  if (pnp_solver_ != nullptr) {
+  if (pnp_solver_ != nullptr) { // 检查是否初始化了PnP求解器
+    // 设置消息头部信息
     armors_msg_.header = armor_marker_.header = text_marker_.header = img_msg->header;
+    // 清空装甲板信息和标记数组，以确保它们为当前图像消息新填充
     armors_msg_.armors.clear();
     marker_array_.markers.clear();
+    // 重置标记id
     armor_marker_.id = 0;
     text_marker_.id = 0;
 
+    // 临时变量，用于存储装甲板信息
     auto_aim_interfaces::msg::Armor armor_msg;
-    for (const auto & armor : armors) {
+    // 遍历检测到的装甲板
+    for (const auto & armor : armors) { // 对于每一个检测到的装甲板
+      // 平移向量和旋转向量
       cv::Mat rvec, tvec;
+      // 使用PnP求解器计算平移向量和旋转向量
       bool success = pnp_solver_->solvePnP(armor, rvec, tvec);
-      if (success) {
+      if (success) { // 如果求解成功
         // Fill basic info
-        armor_msg.type = ARMOR_TYPE_STR[static_cast<int>(armor.type)];
-        armor_msg.number = armor.number;
+        // 填充基本信息
+        armor_msg.type = ARMOR_TYPE_STR[static_cast<int>(armor.type)]; // 装甲板类型
+        armor_msg.number = armor.number; // 装甲板编号
 
         // Fill pose
+        // 填充位姿信息，计算装甲板的3D位姿
         armor_msg.pose.position.x = tvec.at<double>(0);
-        armor_msg.pose.position.y = tvec.at<double>(1);
+        armor_msg.pose.position.y = tvec.at<double>(1); 
         armor_msg.pose.position.z = tvec.at<double>(2);
         // rvec to 3x3 rotation matrix
+        // 旋转向量转换为旋转矩阵
         cv::Mat rotation_matrix;
         cv::Rodrigues(rvec, rotation_matrix);
         // rotation matrix to quaternion
+        // 将3x3的旋转矩阵转换为四元数形式
         tf2::Matrix3x3 tf2_rotation_matrix(
           rotation_matrix.at<double>(0, 0), rotation_matrix.at<double>(0, 1),
           rotation_matrix.at<double>(0, 2), rotation_matrix.at<double>(1, 0),
@@ -174,32 +186,40 @@ void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image::ConstShared
           rotation_matrix.at<double>(2, 0), rotation_matrix.at<double>(2, 1),
           rotation_matrix.at<double>(2, 2));
         tf2::Quaternion tf2_q;
+        // 旋转矩阵转换为四元数
         tf2_rotation_matrix.getRotation(tf2_q);
+        // 四元数转换为消息类型
         armor_msg.pose.orientation = tf2::toMsg(tf2_q);
 
         // Fill the distance to image center
+        // 计算装甲板中心到图像中心的距离
         armor_msg.distance_to_image_center = pnp_solver_->calculateDistanceToCenter(armor.center);
 
         // Fill the markers
-        armor_marker_.id++;
-        armor_marker_.scale.y = armor.type == ArmorType::SMALL ? 0.135 : 0.23;
-        armor_marker_.pose = armor_msg.pose;
-        text_marker_.id++;
-        text_marker_.pose.position = armor_msg.pose.position;
-        text_marker_.pose.position.y -= 0.1;
-        text_marker_.text = armor.classfication_result;
-        armors_msg_.armors.emplace_back(armor_msg);
-        marker_array_.markers.emplace_back(armor_marker_);
-        marker_array_.markers.emplace_back(text_marker_);
+        // 填充用于可视化的标记信息
+        armor_marker_.id++; // 标记id
+        armor_marker_.scale.y = armor.type == ArmorType::SMALL ? 0.135 : 0.23; // 标记尺寸
+        armor_marker_.pose = armor_msg.pose; // 标记位姿
+        text_marker_.id++;// 标记id
+        text_marker_.pose.position = armor_msg.pose.position; // 标记位姿
+        text_marker_.pose.position.y -= 0.1; // 标记位姿
+        text_marker_.text = armor.classfication_result; // 标记文本
+        armors_msg_.armors.emplace_back(armor_msg); // 装甲板信息
+        marker_array_.markers.emplace_back(armor_marker_); // 标记数组
+        marker_array_.markers.emplace_back(text_marker_); // 标记数组
       } else {
+        // 如果PnP失败，发出警告
         RCLCPP_WARN(this->get_logger(), "PnP failed!");
       }
     }
 
     // Publishing detected armors
+    // 发布信息
+    // 发布检测到的装甲板信息
     armors_pub_->publish(armors_msg_);
 
     // Publishing marker
+    //调用函数发布装甲板的可视化标记
     publishMarkers();
   }
 }
@@ -313,7 +333,7 @@ std::vector<Armor> ArmorDetectorNode::detectArmors(
   return armors;
 }
 
-// 创建debug发布器，发布信息为灯条、装甲板、二值化图像、数字图像、结果图像
+/// @brief 创建debug发布器，发布信息为灯条、装甲板、二值化图像、数字图像、结果图像
 void ArmorDetectorNode::createDebugPublishers()
 {
   // 创建ros2的发布器，发布灯条信息，话题名为/detector/debug_lights
@@ -331,7 +351,7 @@ void ArmorDetectorNode::createDebugPublishers()
   result_img_pub_ = image_transport::create_publisher(this, "/detector/result_img");
 }
 
-// 销毁debug发布器
+/// @brief 销毁debug发布器
 void ArmorDetectorNode::destroyDebugPublishers()
 {
   lights_data_pub_.reset();
