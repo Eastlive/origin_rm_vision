@@ -26,7 +26,20 @@
 
 namespace rm_auto_aim
 {
-// 创建名为armor_detector的节点
+/// @brief 装甲板检测节点的构造函数
+/// @param options 节点选项
+/// @details 初始化信息有
+/// 1. 节点名称，为armor_detector
+/// 2. 装甲板检测器
+/// 3. 装甲板检测结果发布器
+/// 4. 装甲板可视化标记发布器
+/// 5. 颜色信息
+/// 6. Debug信息
+/// 7. 相机参数
+///  7.1 相机内参
+///  7.2 相机畸变参数
+///  7.3 PnP解算器
+/// 8. 图像订阅器
 ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions & options)
 : Node("armor_detector", options)
 {
@@ -191,45 +204,58 @@ void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image::ConstShared
   }
 }
 
+/// @brief 初始化装甲板检测器
+/// @return 装甲板检测器 
 std::unique_ptr<Detector> ArmorDetectorNode::initDetector()
 {
+  // 参数描述与范围
   rcl_interfaces::msg::ParameterDescriptor param_desc;
-  param_desc.integer_range.resize(1);
-  param_desc.integer_range[0].step = 1;
-  param_desc.integer_range[0].from_value = 0;
-  param_desc.integer_range[0].to_value = 255;
+  param_desc.integer_range.resize(1); // 整数范围
+  param_desc.integer_range[0].step = 1; // 步长
+  param_desc.integer_range[0].from_value = 0; // 起始值
+  param_desc.integer_range[0].to_value = 255; // 终止值
+  // 获取二值化阈值参数，是一个整数，范围为0-255
   int binary_thres = declare_parameter("binary_thres", 160, param_desc);
 
-  param_desc.description = "0-RED, 1-BLUE";
-  param_desc.integer_range[0].from_value = 0;
-  param_desc.integer_range[0].to_value = 1;
+  param_desc.description = "0-RED, 1-BLUE"; // 参数描述，0-红色，1-蓝色
+  param_desc.integer_range[0].from_value = 0; // 起始值
+  param_desc.integer_range[0].to_value = 1; // 终止值
+  // 获取颜色参数，是一个整数，范围为0-1，0表示红色，1表示蓝色
   auto detect_color = declare_parameter("detect_color", RED, param_desc);
 
+  // 灯条参数声明
   Detector::LightParams l_params = {
-    .min_ratio = declare_parameter("light.min_ratio", 0.1),
-    .max_ratio = declare_parameter("light.max_ratio", 0.4),
-    .max_angle = declare_parameter("light.max_angle", 40.0)};
+    .min_ratio = declare_parameter("light.min_ratio", 0.1), // 灯条最小比例
+    .max_ratio = declare_parameter("light.max_ratio", 0.4), // 灯条最大比例
+    .max_angle = declare_parameter("light.max_angle", 40.0)}; // 灯条最大角度
 
+  // 装甲板参数声明
   Detector::ArmorParams a_params = {
-    .min_light_ratio = declare_parameter("armor.min_light_ratio", 0.8),
-    .min_small_center_distance = declare_parameter("armor.min_small_center_distance", 0.8),
-    .max_small_center_distance = declare_parameter("armor.max_small_center_distance", 3.2),
-    .min_large_center_distance = declare_parameter("armor.min_large_center_distance", 3.2),
-    .max_large_center_distance = declare_parameter("armor.max_large_center_distance", 5.5),
-    .max_angle = declare_parameter("armor.max_angle", 35.0)};
+    .min_light_ratio = declare_parameter("armor.min_light_ratio", 0.8), // 装甲板最小灯条比例
+    .min_small_center_distance = declare_parameter("armor.min_small_center_distance", 0.8), // 装甲板最小小灯条中心距离
+    .max_small_center_distance = declare_parameter("armor.max_small_center_distance", 3.2), // 装甲板最大小灯条中心距离
+    .min_large_center_distance = declare_parameter("armor.min_large_center_distance", 3.2), // 装甲板最小大灯条中心距离
+    .max_large_center_distance = declare_parameter("armor.max_large_center_distance", 5.5), // 装甲板最大大灯条中心距离
+    .max_angle = declare_parameter("armor.max_angle", 35.0)}; // 装甲板最大角度
 
+  // 创建装甲板检测器
   auto detector = std::make_unique<Detector>(binary_thres, detect_color, l_params, a_params);
 
   // Init classifier
+  // 初始化分类器
+  // 获取模型路径和标签路径
   auto pkg_path = ament_index_cpp::get_package_share_directory("armor_detector");
-  auto model_path = pkg_path + "/model/mlp.onnx";
-  auto label_path = pkg_path + "/model/label.txt";
-  double threshold = this->declare_parameter("classifier_threshold", 0.7);
+  auto model_path = pkg_path + "/model/mlp.onnx"; // 模型路径
+  auto label_path = pkg_path + "/model/label.txt"; // 标签路径
+  // 获取分类器阈值和忽略类别
+  double threshold = this->declare_parameter("classifier_threshold", 0.7);  // 分类器阈值
   std::vector<std::string> ignore_classes =
-    this->declare_parameter("ignore_classes", std::vector<std::string>{"negative"});
+    this->declare_parameter("ignore_classes", std::vector<std::string>{"negative"}); // 忽略类别
+  // 创建分类器
   detector->classifier =
     std::make_unique<NumberClassifier>(model_path, label_path, threshold, ignore_classes);
 
+  // 返回装甲板检测器
   return detector;
 }
 

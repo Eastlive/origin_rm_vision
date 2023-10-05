@@ -19,19 +19,20 @@
 
 namespace rm_auto_aim
 {
-// 检测器的构造函数
-// 初始化：
-// 1. 二值化阈值
-// 2. 装甲板颜色
-// 3. 灯条参数
-// 4. 装甲板参数
+/// @brief 检测器的构造函数
+/// @param bin_thres 二值化阈值
+/// @param color 装甲板颜色
+/// @param l 灯条参数
+/// @param a 装甲板参数
 Detector::Detector(
   const int & bin_thres, const int & color, const LightParams & l, const ArmorParams & a)
 : binary_thres(bin_thres), detect_color(color), l(l), a(a)
 {
 }
 
-// 对图像进行装甲板检测
+/// @brief 对图像进行装甲板检测
+/// @param input 输入图像
+/// @return 装甲板容器
 std::vector<Armor> Detector::detect(const cv::Mat & input)
 {
   // 预处理图像
@@ -53,7 +54,9 @@ std::vector<Armor> Detector::detect(const cv::Mat & input)
   return armors_;
 }
 
-// 对图像进行预处理
+/// @brief 对图像进行预处理
+/// @param rgb_img 输入图像
+/// @return 二值化图像
 cv::Mat Detector::preprocessImage(const cv::Mat & rgb_img)
 {
   // 将图像转换为灰度图像
@@ -68,7 +71,10 @@ cv::Mat Detector::preprocessImage(const cv::Mat & rgb_img)
   return binary_img;
 }
 
-// 寻找符合要求的灯条
+/// @brief 寻找符合要求的灯条
+/// @param rbg_img 原始图像
+/// @param binary_img 二值化图像
+/// @return 灯条容器
 std::vector<Light> Detector::findLights(const cv::Mat & rbg_img, const cv::Mat & binary_img)
 {
   using std::vector;
