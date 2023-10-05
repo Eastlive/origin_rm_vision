@@ -96,8 +96,8 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
     Armor same_id_armor;                     // 该变量用于存储与追踪目标id相同的装甲板，初始值为空
     int same_id_armors_count = 0;            // 该变量用于存储与追踪目标id相同的装甲板数量，初始值为0
     auto predicted_position = getArmorPositionFromState(ekf_prediction);    // 该变量用于存储预测的装甲板位置，此位置由EKF的预测值得到，该变量为3维向量
-    double min_position_diff = DBL_MAX;      // 该变量用于存储最小距离差，初始值为最大值
-    double yaw_diff = DBL_MAX;               // 该变量用于存储偏航角差，初始值为最大值
+    double min_position_diff = DBL_MAX;      // 该变量用于存储预测于观测的最小距离差，初始值为最大值
+    double yaw_diff = DBL_MAX;               // 该变量用于存储预测于观测的偏航角差，初始值为最大值
     // 遍历装甲板信息
     for (const auto & armor : armors_msg->armors) {
       // Only consider armors with the same id
@@ -131,7 +131,7 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
     info_yaw_diff = yaw_diff;
 
     // Check if the distance and yaw difference of closest armor are within the threshold
-    // 如果距离差小于最大匹配距离，且偏航角差小于最大匹配偏航角差
+    // 如果距离差和偏航角差在合理的范围内，则认为找到了匹配的装甲板
     // 此处最大匹配距离为0.7，最大匹配偏航角差为1.0，可在launch文件中修改
     if (min_position_diff < max_match_distance_ && yaw_diff < max_match_yaw_diff_) {
       // Matched armor found
@@ -272,23 +272,31 @@ void Tracker::updateArmorsNum(const Armor & armor)
 // 处理装甲板跳变
 void Tracker::handleArmorJump(const Armor & current_armor)
 {
+  // 计算yaw
+  // 从current_armor中获取yaw
   double yaw = orientationToYaw(current_armor.pose.orientation);
+  // 将yaw更新到状态量中
   target_state(6) = yaw;
+  // 更新目标装甲板数量
   updateArmorsNum(current_armor);
   // Only 4 armors has 2 radius and height
+  // 只有4块装甲板有两个半径和高度
   if (tracked_armors_num == ArmorsNum::NORMAL_4) {
     dz = target_state(4) - current_armor.pose.position.z;
     target_state(4) = current_armor.pose.position.z;
     std::swap(target_state(8), another_r);
   }
+  // 警告装甲板跳变
   RCLCPP_WARN(rclcpp::get_logger("armor_tracker"), "Armor jump!");
 
   // If position difference is larger than max_match_distance_,
   // take this case as the ekf diverged, reset the state
+  // 如果位置差大于最大匹配距离，则认为EKF发散，重置状态
   auto p = current_armor.pose.position;
-  Eigen::Vector3d current_p(p.x, p.y, p.z);
-  Eigen::Vector3d infer_p = getArmorPositionFromState(target_state);
-  if ((current_p - infer_p).norm() > max_match_distance_) {
+  Eigen::Vector3d current_p(p.x, p.y, p.z); // 当前装甲板位置
+  Eigen::Vector3d infer_p = getArmorPositionFromState(target_state); // 预测装甲板位置
+  if ((current_p - infer_p).norm() > max_match_distance_) { //如果当前装甲板位置与预测装甲板位置的距离差大于最大匹配距离阈值
+    // 认为EKF发散，重置状态
     double r = target_state(8);
     target_state(0) = p.x + r * cos(yaw);  // xc
     target_state(1) = 0;                   // vxc
@@ -296,9 +304,10 @@ void Tracker::handleArmorJump(const Armor & current_armor)
     target_state(3) = 0;                   // vyc
     target_state(4) = p.z;                 // za
     target_state(5) = 0;                   // vza
+    // 发布错误信息
     RCLCPP_ERROR(rclcpp::get_logger("armor_tracker"), "Reset State!");
   }
-
+  // 设置EKF状态
   ekf.setState(target_state);
 }
 

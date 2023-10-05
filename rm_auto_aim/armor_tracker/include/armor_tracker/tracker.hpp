@@ -56,7 +56,9 @@ public:
   // 扩展卡尔曼滤波器
   ExtendedKalmanFilter ekf;
 
+  // 用于标记追踪器的追踪阈值，超过该阈值则切换为跟踪状态
   int tracking_thres;
+  // 用于标记追踪器的丢失阈值，超过该阈值则切换为丢失状态
   int lost_thres;
 
   // 用于标记追踪状态
@@ -81,7 +83,9 @@ public:
   // 用于标记目标单位拥有的装甲板的数量
   ArmorsNum tracked_armors_num;
 
+  // 用于标记预测的装甲板于最近的检测到的装甲板的距离差
   double info_position_diff;
+  // 用于标记预测的装甲板于最近的检测到的装甲板的偏航角差
   double info_yaw_diff;
 
   // 用于存储EKF观测量，用于更新步
@@ -107,6 +111,10 @@ private:
    */
   void updateArmorsNum(const Armor & a);
 
+  /**
+   * @brief 处理装甲板跳变，在update函数中调用
+   * @param a 装甲板信息
+   */
   void handleArmorJump(const Armor & a);
 
   /**
@@ -123,14 +131,17 @@ private:
    */
   Eigen::Vector3d getArmorPositionFromState(const Eigen::VectorXd & x);
 
-  // 最大匹配距离
+  // 最大匹配距离参数
   double max_match_distance_;
-  // 最大匹配偏航角差
+  // 最大匹配偏航角差参数
   double max_match_yaw_diff_;
 
+  // 用于标记目标单位被检测的次数，超过阈值则切换为TRACKING状态
   int detect_count_;
+  // 用于标记目标单位丢失的次数，超过阈值则切换为LOST状态
   int lost_count_;
 
+  // 用于确保yaw的连续性，标记上一次的偏航角
   double last_yaw_;
 };
 
