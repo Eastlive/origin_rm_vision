@@ -88,72 +88,79 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
   // 如果没有找到匹配的装甲板，则使用EKF预测作为默认目标状态
   // target_state的状态会在后续的匹配装甲板逻辑中更新
   target_state = ekf_prediction;
+
   // 匹配装甲板
   // 如果装甲板信息不为空
   if (!armors_msg->armors.empty()) {
-    // 查找与追踪目标id相同的装甲板
-    Armor same_id_armor;
-    int same_id_armors_count = 0;
-    // 该变量用于存储预测的装甲板位置，此位置由EKF的预测值得到，该变量为3维向量
-    auto predicted_position = getArmorPositionFromState(ekf_prediction);
-    // 该变量用于存储最小距离差，初始值为最大值
-    double min_position_diff = DBL_MAX;
-    // 该变量用于存储偏航角差，初始值为最大值
-    double yaw_diff = DBL_MAX;
+    // 用于储存计算信息的变量
+    Armor same_id_armor;                     // 该变量用于存储与追踪目标id相同的装甲板，初始值为空
+    int same_id_armors_count = 0;            // 该变量用于存储与追踪目标id相同的装甲板数量，初始值为0
+    auto predicted_position = getArmorPositionFromState(ekf_prediction);    // 该变量用于存储预测的装甲板位置，此位置由EKF的预测值得到，该变量为3维向量
+    double min_position_diff = DBL_MAX;      // 该变量用于存储最小距离差，初始值为最大值
+    double yaw_diff = DBL_MAX;               // 该变量用于存储偏航角差，初始值为最大值
     // 遍历装甲板信息
     for (const auto & armor : armors_msg->armors) {
       // Only consider armors with the same id
-      // 如果装甲板id与追踪目标id相同
-      if (armor.number == tracked_id) {
-        // 将该装甲板存下，用于后续处理
-        same_id_armor = armor;
-        // 装甲板计数器加一
-        same_id_armors_count++;
+      // 只考虑与追踪目标id相同的装甲板
+
+      if (armor.number == tracked_id) { // 如果装甲板id与追踪目标id相同
+        same_id_armor = armor;    // 将该装甲板存下，用于后续处理
+        same_id_armors_count++;   // 装甲板计数器加一
         // Calculate the difference between the predicted position and the current armor position
         // 计算预测的装甲板位置与当前装甲板位置的距离差
-        auto p = armor.pose.position;
-        // 将当前遍历到的装甲板位置存储为3维向量
-        Eigen::Vector3d position_vec(p.x, p.y, p.z);
-        // 计算预测的装甲板位置与当前检测到的装甲板位置的距离差
-        double position_diff = (predicted_position - position_vec).norm();
-        // 如果距离差小于最小距离差
-        if (position_diff < min_position_diff) {
+        auto p = armor.pose.position; // 用来存储当前遍历到的装甲板位置
+        Eigen::Vector3d position_vec(p.x, p.y, p.z); // 将装甲板位置转化为3维向量
+        double position_diff = (predicted_position - position_vec).norm(); // 计算预测的装甲板位置与当前检测到的装甲板位置的距离差
+
+        if (position_diff < min_position_diff) { // 如果距离差小于最小距离差
           // Find the closest armor
           // 更新最小距离差
           min_position_diff = position_diff;
           // 更新偏航角差
+          // orientationToYaw函数用于从四元数方向中获取yaw，并确保yaw的连续性
+          // ekf_prediction(6)为EKF预测的偏航角，向量的第7个元素
           yaw_diff = abs(orientationToYaw(armor.pose.orientation) - ekf_prediction(6));
-          // 更新追踪装甲板
-          tracked_armor = armor;
+          tracked_armor = armor; // 更新追踪装甲板
         }
       }
-    }
+    } // 遍历装甲板信息的结果为：找到与追踪目标id相同且距离最近的装甲板
 
     // Store tracker info
+    // 保存追踪信息
     info_position_diff = min_position_diff;
     info_yaw_diff = yaw_diff;
 
     // Check if the distance and yaw difference of closest armor are within the threshold
+    // 如果距离差小于最大匹配距离，且偏航角差小于最大匹配偏航角差
+    // 此处最大匹配距离为0.7，最大匹配偏航角差为1.0，可在launch文件中修改
     if (min_position_diff < max_match_distance_ && yaw_diff < max_match_yaw_diff_) {
       // Matched armor found
+      // 标记找到匹配的装甲板
       matched = true;
-      auto p = tracked_armor.pose.position;
+      // 更新追踪装甲板
+      auto p = tracked_armor.pose.position; // 记录装甲板位置
       // Update EKF
-      double measured_yaw = orientationToYaw(tracked_armor.pose.orientation);
-      measurement = Eigen::Vector4d(p.x, p.y, p.z, measured_yaw);
+      // 更新EKF
+      double measured_yaw = orientationToYaw(tracked_armor.pose.orientation); // 记录装甲板yaw
+      measurement = Eigen::Vector4d(p.x, p.y, p.z, measured_yaw); // measurement为EKF的测量向量
+      // 执行EKF的更新步
       target_state = ekf.update(measurement);
+      // 发布调试信息
       RCLCPP_DEBUG(rclcpp::get_logger("armor_tracker"), "EKF update");
     } else if (same_id_armors_count == 1 && yaw_diff > max_match_yaw_diff_) {
       // Matched armor not found, but there is only one armor with the same id
       // and yaw has jumped, take this case as the target is spinning and armor jumped
+      // 如果只有一个装甲板与追踪目标id相同，且偏航角差大于最大匹配偏航角差，则认为目标正在旋转，装甲板跳变
       handleArmorJump(same_id_armor);
     } else {
       // No matched armor found
+      // 没有找到匹配的装甲板
       RCLCPP_WARN(rclcpp::get_logger("armor_tracker"), "No matched armor found!");
     }
   }
 
   // Prevent radius from spreading
+  // 防止半径扩散
   if (target_state(8) < 0.12) {
     target_state(8) = 0.12;
     ekf.setState(target_state);
@@ -163,30 +170,51 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
   }
 
   // Tracking state machine
+  // 追踪状态机
+  // 更新规则如下：
+  //           ┌──检测到装甲板─┬──超过阈值─> TRACKING
+  // DETECTING─┤             └─未超过阈值─> DETECTING
+  //           └─未检测到装甲板─> LOST
+  // TRACKING────未检测到装甲板─> TEMP_LOST
+  //           ┌──检测到装甲板─> TRACKING
+  // TEMP_LOST─┤              ┌─未超过阈值─> TEMP_LOST
+  //           └──未检测到装甲──┴──超过阈值─> LOST
   if (tracker_state == DETECTING) {
     if (matched) {
       detect_count_++;
+      // 在检测状态下
+      // 如果检测到装甲板超过阈值，则认为目标检测到
+      // 标记目标状态为追踪状态
       if (detect_count_ > tracking_thres) {
         detect_count_ = 0;
         tracker_state = TRACKING;
       }
     } else {
+      // 在检测状态下
+      // 如果没有检测到装甲板，则认为目标丢失
       detect_count_ = 0;
       tracker_state = LOST;
     }
   } else if (tracker_state == TRACKING) {
     if (!matched) {
+      // 在追踪状态下
+      // 如果没有检测到装甲板，则认为目标丢失
       tracker_state = TEMP_LOST;
       lost_count_++;
     }
   } else if (tracker_state == TEMP_LOST) {
     if (!matched) {
       lost_count_++;
+      // 在暂时丢失状态下
+      // 如果丢失时间超过阈值，则认为目标丢失
+      // 标记目标状态为丢失状态
       if (lost_count_ > lost_thres) {
         lost_count_ = 0;
         tracker_state = LOST;
       }
     } else {
+      // 在暂时丢失状态下
+      // 如果检测到装甲板，则认为目标重新检测到
       tracker_state = TRACKING;
       lost_count_ = 0;
     }
@@ -203,11 +231,24 @@ void Tracker::initEKF(const Armor & a)
   double yaw = orientationToYaw(a.pose.orientation);
 
   // Set initial position at 0.2m behind the target
+  // 将初始位置设置为目标后方0.2m处
   target_state = Eigen::VectorXd::Zero(9);
+  // 0.26为装甲板半径
   double r = 0.26;
   double xc = xa + r * cos(yaw);
   double yc = ya + r * sin(yaw);
   dz = 0, another_r = r;
+
+  // 状态信息依次为：
+  // 1. xc 机器人x方向坐标
+  // 2. vxc 机器人x方向速度
+  // 3. yc 机器人y方向坐标
+  // 4. vyc 机器人y方向速度
+  // 5. za 装甲板z方向坐标
+  // 6. vza 装甲板z方向速度
+  // 7. yaw 机器人旋转角度
+  // 8. vyaw 机器人旋转角速度
+  // 9. r 装甲板半径
   target_state << xc, 0, yc, 0, za, 0, yaw, 0, r;
 
   ekf.setState(target_state);
@@ -228,6 +269,7 @@ void Tracker::updateArmorsNum(const Armor & armor)
   }
 }
 
+// 处理装甲板跳变
 void Tracker::handleArmorJump(const Armor & current_armor)
 {
   double yaw = orientationToYaw(current_armor.pose.orientation);

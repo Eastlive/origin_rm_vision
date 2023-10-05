@@ -43,13 +43,13 @@ public:
 
   /**
    * @brief 初始化追踪器，在追踪器为LOST状态时调用
-   * @param armors_msg 装甲板信息，当装甲板信息为空时，不进行初始化
+   * @param armors_msg 所有检测到的装甲板信息，当装甲板信息为空时，不进行初始化
    */
   void init(const Armors::SharedPtr & armors_msg);
 
   /**
    * @brief 更新追踪器，在追踪器不为LOST状态时调用
-   * @param armors_msg 装甲板信息，当装甲板信息为空时，不进行更新
+   * @param armors_msg 所有检测到的装甲板信息，当装甲板信息为空时，不进行更新
    */
   void update(const Armors::SharedPtr & armors_msg);
 
@@ -63,7 +63,7 @@ public:
   // LOST: 丢失目标
   // DETECTING: 正在检测目标
   // TRACKING: 正在追踪目标
-  // TEMP_LOST: 临时丢失目标
+  // TEMP_LOST: 暂时丢失目标
   // tracker_state为State类型
   enum State
   {
@@ -74,6 +74,7 @@ public:
   } tracker_state;
 
   // 用于标记目标装甲板的id信息
+  // 该变量在整个tracker中生效
   std::string tracked_id;
   // 用于存储追踪的装甲板信息
   Armor tracked_armor;
@@ -83,17 +84,20 @@ public:
   double info_position_diff;
   double info_yaw_diff;
 
+  // 用于存储EKF观测量，用于更新步
   Eigen::VectorXd measurement;
 
+  // 用于存储EKF状态量，用于记录预测步
   Eigen::VectorXd target_state;
 
   // To store another pair of armors message
+  // 用于存储另一组装甲板信息
   double dz, another_r;
 
 private:
   /**
    * @brief 初始化卡尔曼滤波器，在init函数中调用
-   * @param a 装甲板信息
+   * @param a 装甲板信息，该装甲板为最接近图像中心的装甲板
    */
   void initEKF(const Armor & a);
 
