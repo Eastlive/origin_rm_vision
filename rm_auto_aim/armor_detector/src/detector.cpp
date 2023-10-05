@@ -135,7 +135,9 @@ std::vector<Light> Detector::findLights(const cv::Mat & rbg_img, const cv::Mat &
   return lights;
 }
 
-// 判断灯条是否符合要求
+/// @brief 判断灯条是否符合要求
+/// @param light 灯条
+/// @return 是否为灯条
 bool Detector::isLight(const Light & light)
 {
   // 灯条的短边长 / 长边长
@@ -159,7 +161,9 @@ bool Detector::isLight(const Light & light)
   return is_light;
 }
 
-// 匹配灯条，寻找装甲板
+/// @brief 匹配灯条，寻找装甲板
+/// @param lights 灯条容器
+/// @return 装甲板容器
 std::vector<Armor> Detector::matchLights(const std::vector<Light> & lights)
 {
   // 创建装甲板容器
@@ -193,7 +197,11 @@ std::vector<Armor> Detector::matchLights(const std::vector<Light> & lights)
   return armors;
 }
 
-// 判断两个灯条中间是否有其他灯条
+/// @brief 判断两个灯条中间是否有其他灯条
+/// @param light_1 灯条1
+/// @param light_2 灯条2
+/// @param lights 灯条容器
+/// @return 是否有其他灯条
 bool Detector::containLight(
   const Light & light_1, const Light & light_2, const std::vector<Light> & lights)
 {
@@ -220,7 +228,10 @@ bool Detector::containLight(
   return false;
 }
 
-// 判断两个灯条是否符合装甲板的要求
+/// @brief 判断两个灯条是否符合装甲板的要求
+/// @param light_1 灯条1
+/// @param light_2 灯条2
+/// @return 装甲板类型
 ArmorType Detector::isArmor(const Light & light_1, const Light & light_2)
 {
   // 计算两个灯条的长度比 (短边长 / 长边长)
@@ -260,18 +271,19 @@ ArmorType Detector::isArmor(const Light & light_1, const Light & light_2)
 
   // 填充调试信息
   auto_aim_interfaces::msg::DebugArmor armor_data;
-  armor_data.type = ARMOR_TYPE_STR[static_cast<int>(type)];
-  armor_data.center_x = (light_1.center.x + light_2.center.x) / 2;
-  armor_data.light_ratio = light_length_ratio;
-  armor_data.center_distance = center_distance;
-  armor_data.angle = angle;
-  this->debug_armors.data.emplace_back(armor_data);
+  armor_data.type = ARMOR_TYPE_STR[static_cast<int>(type)]; // 装甲板类型
+  armor_data.center_x = (light_1.center.x + light_2.center.x) / 2; // 装甲板中心点的x坐标
+  armor_data.light_ratio = light_length_ratio; // 两个灯条的长度比
+  armor_data.center_distance = center_distance; // 两个灯条中心的距离
+  armor_data.angle = angle; // 两个灯条中心连线的角度
+  this->debug_armors.data.emplace_back(armor_data); // 将调试信息存入调试信息容器
 
   // 返回装甲板类型
   return type;
 }
 
-// Debug，获取所有数字图片
+/// @brief 获取所有数字图片
+/// @return 所有数字图片
 cv::Mat Detector::getAllNumbersImage()
 {
   if (armors_.empty()) {
@@ -295,7 +307,9 @@ cv::Mat Detector::getAllNumbersImage()
   }
 }
 
-// Debug，将识别到的数字绘制在图像上
+/// @brief Debug，将识别到的数字绘制在图像上
+/// @param img 输入图像
+/// @return 绘制了数字的图像
 void Detector::drawResults(cv::Mat & img)
 {
   // Draw Lights
