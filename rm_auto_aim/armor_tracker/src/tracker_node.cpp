@@ -7,6 +7,10 @@
 
 namespace rm_auto_aim
 {
+/// @brief 跟踪器节点的构造函数
+/// @param options 节点选项
+/// @details 初始化信息有：
+/// 1. 节点名称，为"armor_tracker"
 ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
 : Node("armor_tracker", options)
 {
@@ -33,6 +37,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // state: xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r
   // measurement: xa, ya, za, yaw
   // f - Process function
+  // 创建Kalman滤波器的F矩阵
   auto f = [this](const Eigen::VectorXd & x) {
       Eigen::VectorXd x_new = x;
       x_new(0) += x(1) * dt_;
@@ -42,6 +47,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
       return x_new;
     };
   // J_f - Jacobian of process function
+  // 创建Kalman滤波器的F矩阵的雅克比矩阵
   auto j_f = [this](const Eigen::VectorXd &) {
       Eigen::MatrixXd f(9, 9);
       // clang-format off
@@ -58,6 +64,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
       return f;
     };
   // h - Observation function
+  // 创建Kalman滤波器的H矩阵
   auto h = [](const Eigen::VectorXd & x) {
       Eigen::VectorXd z(4);
       double xc = x(0), yc = x(2), yaw = x(6), r = x(8);
@@ -68,6 +75,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
       return z;
     };
   // J_h - Jacobian of observation function
+  // 创建Kalman滤波器的H矩阵的雅克比矩阵
   auto j_h = [](const Eigen::VectorXd & x) {
       Eigen::MatrixXd h(4, 9);
       double yaw = x(6), r = x(8);
