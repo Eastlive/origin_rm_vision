@@ -33,8 +33,10 @@ VirtualCamNode::VirtualCamNode(const rclcpp::NodeOptions & options)
   std::shared_ptr<CamInterface> cam_dev;
   if (!image_path.empty()) {
     cam_dev_ = std::make_shared<VirtualCam>(VirtualCam::IMAGE_MODE, image_path);
+    RCLCPP_INFO(node_->get_logger(), "Image mode, image_path: %s", image_path.c_str());
   } else if (!video_path.empty()) {
     cam_dev_ = std::make_shared<VirtualCam>(VirtualCam::VIDEO_MODE, video_path);
+    RCLCPP_INFO(node_->get_logger(), "Video mode, video_path: %s", video_path.c_str());
   } else {
     RCLCPP_WARN(node_->get_logger(), "image_path or video_path is empty");
     return;

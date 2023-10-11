@@ -9,6 +9,6 @@ usb_cam:
 
 virtual_video_cam:
     ros__parameters:
-        video_path : "~/test.avi"
+        video_path : "../resource/hero.avi"
         camera_name: "front_camera"
         autostart: true
