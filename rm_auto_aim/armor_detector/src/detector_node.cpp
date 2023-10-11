@@ -124,7 +124,7 @@ ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions & options)
   }
   // 相机参数订阅器
   cam_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-    "/camera_info", rclcpp::SensorDataQoS(),
+    "/front_camera/camera_info", rclcpp::SensorDataQoS(),
     [this](sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info) {
       cam_center_ = cv::Point2f(camera_info->k[2], camera_info->k[5]); // 设置相机中心点
       cam_info_ = std::make_shared<sensor_msgs::msg::CameraInfo>(*camera_info); // 保存相机参数
@@ -134,7 +134,7 @@ ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions & options)
 
   // 创建一个订阅器来接收原始图像，并将其传递给imageCallback函数处理
   img_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-    "/image_raw", rclcpp::SensorDataQoS(),
+    "/front_camera/image_raw", rclcpp::SensorDataQoS(),
     std::bind(&ArmorDetectorNode::imageCallback, this, std::placeholders::_1));
 
 }
