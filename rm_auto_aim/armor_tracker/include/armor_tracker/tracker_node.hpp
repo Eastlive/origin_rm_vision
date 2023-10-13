@@ -55,15 +55,26 @@ private:
 
   void publishMarkers(const auto_aim_interfaces::msg::Target & target_msg);
 
+  /**
+   * @brief 根据下位机的子弹速度，设置弹道解算器的子弹速度
+   * @param bulletspeed 下位机的子弹速度
+   */
   void setBulletSpeed(const std_msgs::msg::Float64::SharedPtr bulletspeed);
 
+  /**
+   * @brief 设置延迟
+   * @param latency 订阅器接收延迟
+   */
   void setLatancy(const std_msgs::msg::Float64::SharedPtr latency);
 
   // Maximum allowable armor distance in the XOY plane
+  // 最大击打距离
   double max_armor_distance_;
 
   // The time when the last message was received
+  // 上一次接收到消息的时间
   rclcpp::Time last_time_;
+  // 上一次时间到现在的时间差
   double dt_;
   double latency_ = 0.0;
 

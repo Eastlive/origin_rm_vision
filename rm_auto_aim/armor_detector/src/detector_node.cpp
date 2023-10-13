@@ -52,6 +52,7 @@ ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions & options)
 
   // Armors Publisher
   // 创建ros2的发布器，发布装甲板信息，话题名为/detector/armors
+  // 该发布器发布的消息为整个armor_detector功能包最后计算的最终结果，用于tracker节点接收
   armors_pub_ = this->create_publisher<auto_aim_interfaces::msg::Armors>(
     "/detector/armors", rclcpp::SensorDataQoS());
 
@@ -148,6 +149,7 @@ void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image::ConstShared
 
   if (pnp_solver_ != nullptr) { // 检查是否初始化了PnP求解器
     // 设置消息头部信息
+    // 此处包含了图像消息的时间戳，以及图像消息的坐标系
     armors_msg_.header = armor_marker_.header = text_marker_.header = img_msg->header;
     // 清空装甲板信息和标记数组，以确保它们为当前图像消息新填充
     armors_msg_.armors.clear();

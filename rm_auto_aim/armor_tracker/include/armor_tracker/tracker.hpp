@@ -96,7 +96,10 @@ public:
 
   // To store another pair of armors message
   // 用于存储另一组装甲板信息
-  double dz, another_r;
+  // 两组装甲板的高度差
+  double dz;
+  // 另一组装甲板的半径
+  double another_r;
 
 private:
   /**
