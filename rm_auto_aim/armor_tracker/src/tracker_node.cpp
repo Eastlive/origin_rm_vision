@@ -253,6 +253,12 @@ void ArmorTrackerNode::setLatancy(const std_msgs::msg::Float64::SharedPtr latenc
 }
 
 /// @brief 进行跟踪
+/// @param armors_msg armor_dedtector输入的装甲板消息
+/// @details 该函数进行跟踪，包括：
+/// 1. 坐标变换
+/// 2. 开始跟踪
+/// 3. 射击系统
+/// 4. 发布消息
 void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_msg)
 {
 
@@ -378,48 +384,65 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
   // 记录时间戳用于下一次计算
   last_time_ = time;
 
-  /////////////////////
-  // 3. 跟踪信息处理   //
-  /////////////////////
+  //////////////////
+  // 3. 射击系统   //
+  //////////////////
 
+  // 1. 判断是否跟踪
   if (target_msg.tracking == true) {
 
+    // 2. 保存目标状态
     //save target states
-    Eigen::Vector3d now_car_pos = Eigen::Vector3d(
+    Eigen::Vector3d now_car_pos = Eigen::Vector3d( // 当前目标机器人位置
       target_msg.position.x,
       target_msg.position.y,
       target_msg.position.z);
-    Eigen::Vector3d now_car_vec = Eigen::Vector3d(
+    Eigen::Vector3d now_car_vec = Eigen::Vector3d( // 当前目标机器人速度
       target_msg.velocity.x,
       target_msg.velocity.y,
       target_msg.velocity.z);
-    double armor_yaw = target_msg.yaw;
-    double car_w = target_msg.v_yaw;
+    double armor_yaw = target_msg.yaw; // 当前目标装甲板偏航角
+    double car_w = target_msg.v_yaw;  // 当前目标机器人偏航角速度
 
+    // 3. 计算预测的目标位置，该部分是因为从计算出目标位置到机器人发射子弹击中目标存在延迟，因此需要预测目标位置
     //save the pred target
-    double pred_dt =
+    double pred_dt = // 预测时间间隔，它是基于延迟、子弹的速度和目标与机器人之间的距离来计算的
       fire_latency + latency_ / 1000 + (now_car_pos.norm() - target_msg.radius_1) /
       trajectory_slover_->getBulletSpeed();
+    // 在预测的时间pred_dt后，目标预期的位置
     Eigen::Vector3d pred_car_pos = now_car_pos + now_car_vec * pred_dt;
+    // 在预测的时间pred_dt后，目标预期的偏航角
     double pred_yaw = armor_yaw + car_w * pred_dt;
+    // 预测位置的偏航角度与机器人的偏航角度之差
     car_center_diff = calcYawAndPitch(pred_car_pos)[0];
-    double r1 = target_msg.radius_1, r2 = target_msg.radius_2;
-    double dz = target_msg.dz;
+    double r1 = target_msg.radius_1; // 半径1
+    double r2 = target_msg.radius_2; // 半径2
+    double dz = target_msg.dz;       // 相邻装甲板高度差
 
-    Eigen::Vector3d armor_target_min_dis, armor_target, pred_armor_pos, armor_target_min_yaw_diff;
+    Eigen::Vector3d armor_target_min_dis;
+    Eigen::Vector3d armor_target;
+    Eigen::Vector3d pred_armor_pos; // 预测的装甲板位置信息，在有四块装甲板的情况下，该变量的z坐标会发生变化
+    Eigen::Vector3d armor_target_min_yaw_diff;
     //double min_dis_yaw;
     double min_yaw_diff = DBL_MAX;
-    bool is_current_pair = true;
-    size_t a_n = target_msg.armors_num;
+    bool is_current_pair = true; // 用来记录装甲板切换
+    size_t a_n = target_msg.armors_num; // 目标装甲板数量
     //double min_distance_armor = DBL_MAX;
     //double min_yaw_diff_armor = DBL_MAX;
-    double r = 0;
+    double r = 0; // 用来记录当前待击打装甲板的半径
+    // 循环，有多少块装甲板就循环多少次
     for (size_t i = 0; i < a_n; i++) {
+      // 整车估计所有装甲板中，当前遍历到的装甲板的位置
       double tmp_yaw = pred_yaw + i * (2 * M_PI / a_n);
       // Only 4 armors has 2 radius and height
+      // 如果装甲板数量为4，则需要考虑相邻装甲板有两个半径
       if (a_n == 4) {
+        // 判断记录第一块还是第二块装甲板
         r = is_current_pair ? r1 : r2;
+        // 如果是第二块装甲板，则z的值要加上dz
         pred_armor_pos[2] = pred_car_pos[2] + (is_current_pair ? 0 : dz);
+        // 切换
+        // 执行完四次之后还是true
         is_current_pair = !is_current_pair;
       } else {
         r = r1;
@@ -452,12 +475,14 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     }
 
     //Tracked permit
+    // 确定是否追踪
     armor_target = armor_target_min_yaw_diff;
     bool tracked_permit = 0;
-    if (rad2deg(min_yaw_diff) < yaw_angle_thres) {
-      tracked_permit = 1;
+    if (rad2deg(min_yaw_diff) < yaw_angle_thres) { // 如果与机器人中心的偏航角度差值小于预定的阈值
+      tracked_permit = 1; // 设置为可以追踪
     }
 
+    // 5.转换坐标系，将目标位置从世界坐标系转换为云台的坐标系
     //Transform world frame to pitch frame
     geometry_msgs::msg::Vector3Stamped point_target, armor_target_tf;
     point_target.vector.x = armor_target(0);
@@ -476,14 +501,17 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     armor_target_yaw_link(1) = armor_target_tf.vector.y;
     armor_target_yaw_link(2) = armor_target_tf.vector.z;
 
-    //Get offset
+    // 6. 计算偏移角度
+    // Get offset
+    // 计算机器人需要调整的云台角度以达到目标位置
     Eigen::Vector2d angel_diff = calcYawAndPitch(armor_target_pitch_link);
     auto trajectory_pitch = (-trajectory_slover_->calcPitchCompensate(armor_target));
 
-
-    //Set fire permit
+    // 7. 设置射击许可
+    // Set fire permit
     int8_t fire_permit = 0;
     if (fabs(angel_diff[0]) < fire_permit_thres && tracked_permit) {
+      // 如果偏移角度在一个预定义的阈值内，并且目标被追踪，则允许射击
       fire_permit = 1;
     }
 
@@ -492,6 +520,7 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     target_msg.offset_pitch = rad2deg((double)angel_diff(1)) + trajectory_pitch +
       static_offset_pitch_;
 
+    // 8. 记录有关偏移、射击许可和其他参数的信息
     RCLCPP_INFO(this->get_logger(), "trajectory_pitch : %lf", trajectory_pitch);
     RCLCPP_INFO(
       this->get_logger(), "offset_pitch : %lf , offset_yaw : %lf", target_msg.offset_pitch,
@@ -507,10 +536,17 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     //RCLCPP_INFO(this->get_logger(), "fire_permit_thres : %lf", fire_permit_thres);
     //RCLCPP_INFO(this->get_logger(), "fire_latency : %lf", fire_latency);
 
+    //////////////////
+    // 4. 发布消息   //
+    //////////////////
+
+    // 发布Target消息
     if (!(isnan(target_msg.offset_yaw) || isnan(target_msg.offset_pitch))) {
+      // 如果偏移角度不是nan，则发布Target消息
       target_pub_->publish(target_msg);
     }
 
+    // 发布可视化Marker消息
     publishMarkers(target_msg);
   }
 }

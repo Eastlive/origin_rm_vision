@@ -151,6 +151,7 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
       // Matched armor not found, but there is only one armor with the same id
       // and yaw has jumped, take this case as the target is spinning and armor jumped
       // 如果只有一个装甲板与追踪目标id相同，且偏航角差大于最大匹配偏航角差，则认为目标正在旋转，装甲板跳变
+      // 该部分的含意是，当检测的装甲板消失，并且另一面转过来时，会出现装甲板跳变的情况
       handleArmorJump(same_id_armor);
     } else {
       // No matched armor found
@@ -269,7 +270,8 @@ void Tracker::updateArmorsNum(const Armor & armor)
   }
 }
 
-// 处理装甲板跳变
+/// @brief 处理装甲板跳变
+/// @param current_armor 当前装甲板
 void Tracker::handleArmorJump(const Armor & current_armor)
 {
   // 计算yaw

@@ -42,6 +42,11 @@ private:
   inline double deg2rad(double deg) {return deg / 180.0 * M_PI;}
   inline double rad2deg(double rad) {return (rad * 180.0) / M_PI;}
 
+  /**
+   * @brief 计算相一个3D点相对于坐标原点的偏航和俯仰角
+   * @param point_cam 相对于相机坐标系的3D点
+   * @return 2D向量，偏航角yaw和俯仰角pitch
+   */
   Eigen::Vector2d calcYawAndPitch(const Eigen::Vector3d & point_cam)
   {
     Eigen::Vector2d offset_angle;
@@ -51,6 +56,7 @@ private:
     offset_angle << offset_yaw, offset_pitch;
     return offset_angle;
   }
+
   void armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_ptr);
 
   void publishMarkers(const auto_aim_interfaces::msg::Target & target_msg);
@@ -121,6 +127,7 @@ private:
   double min_speed;
 
   //car_center_angle
+  // 记录机器人转向目标的yaw角度之差
   double car_center_diff;
 
   //trajectory_slover

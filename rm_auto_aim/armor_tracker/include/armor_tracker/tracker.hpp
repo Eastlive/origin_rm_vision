@@ -96,6 +96,7 @@ public:
 
   // To store another pair of armors message
   // 用于存储另一组装甲板信息
+  // 此处的另一组是相对当前跟踪目标来算的
   // 两组装甲板的高度差
   double dz;
   // 另一组装甲板的半径
@@ -116,9 +117,9 @@ private:
 
   /**
    * @brief 处理装甲板跳变，在update函数中调用
-   * @param a 装甲板信息
+   * @param current_armor 装甲板信息
    */
-  void handleArmorJump(const Armor & a);
+  void handleArmorJump(const Armor & current_armor);
 
   /**
    * @brief 此函数用于将四元数转换为偏航角
