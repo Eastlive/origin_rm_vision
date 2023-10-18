@@ -17,6 +17,12 @@ namespace virtual_serial_driver
 class VirtualSerialDriver : public rclcpp::Node
 {
 private:
+
+  char enemy_color_;
+  double bullet_speed_;
+  double pitch_joint_;
+  double yaw_joint_;
+
   rclcpp::Publisher<std_msgs::msg::Char>::SharedPtr enemy_color_pub_;
 
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr bullet_speed_pub_;

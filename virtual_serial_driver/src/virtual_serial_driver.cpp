@@ -12,6 +12,16 @@ VirtualSerialDriver::VirtualSerialDriver(const rclcpp::NodeOptions & options)
 {
   RCLCPP_INFO(this->get_logger(), "Start virtual serial driver!");
 
+  enemy_color_ = declare_parameter("enemy_color", 'R');
+  bullet_speed_ = declare_parameter("bullet_speed", 15.0);
+  pitch_joint_ = declare_parameter("pitch_joint", 0.0);
+  yaw_joint_ = declare_parameter("yaw_joint", 0.0);
+
+  RCLCPP_INFO(this->get_logger(), "enemy_color: %c", enemy_color_);
+  RCLCPP_INFO(this->get_logger(), "bullet_speed: %f", bullet_speed_);
+  RCLCPP_INFO(this->get_logger(), "pitch_joint: %f", pitch_joint_);
+  RCLCPP_INFO(this->get_logger(), "yaw_joint: %f", yaw_joint_);
+
   enemy_color_pub_ = this->create_publisher<std_msgs::msg::Char>("/color", 10);
 
   bullet_speed_pub_ = this->create_publisher<std_msgs::msg::Float64>("/bullet_speed", 10);
@@ -26,22 +36,22 @@ VirtualSerialDriver::VirtualSerialDriver(const rclcpp::NodeOptions & options)
 
 void VirtualSerialDriver::timerCallback()
 {
-  RCLCPP_INFO(this->get_logger(), "Start Timer Callback!");
+  // RCLCPP_INFO(this->get_logger(), "Start Timer Callback!");
 
   std_msgs::msg::Char color;
-  color.data = 'R';
+  color.data = enemy_color_;
   enemy_color_pub_->publish(color);
 
   std_msgs::msg::Float64 bullet_speed;
-  bullet_speed.data = 0.0;
+  bullet_speed.data = bullet_speed_;
   bullet_speed_pub_->publish(bullet_speed);
 
   sensor_msgs::msg::JointState joint_state;
   joint_state.header.stamp = this->now();
   joint_state.name.push_back("pitch_joint");
   joint_state.name.push_back("yaw_joint");
-  joint_state.position.push_back(0.1);
-  joint_state.position.push_back(0.1);
+  joint_state.position.push_back(pitch_joint_);
+  joint_state.position.push_back(yaw_joint_);
   joint_state_pub_->publish(joint_state);
 }
 

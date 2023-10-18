@@ -12,9 +12,8 @@ def generate_launch_description():
     virtual_serial_driver_node = Node(
         package='virtual_serial_driver',
         executable='virtual_serial_driver_node',
-        namespace='',
         output='screen',
-        parameters=[config]
+        parameters=[config],
     )
 
     return LaunchDescription([virtual_serial_driver_node])

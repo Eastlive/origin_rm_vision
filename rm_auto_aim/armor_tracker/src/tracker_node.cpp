@@ -7,29 +7,19 @@
 
 namespace rm_auto_aim
 {
-/// @brief 跟踪器节点的构造函数
-/// @param options 节点选项
-/// @details 初始化信息有：
-/// 1. 节点名称，为"armor_tracker"
 ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
 : Node("armor_tracker", options)
 {
   RCLCPP_INFO(this->get_logger(), "Starting TrackerNode!");
 
   // Maximum allowable armor distance in the XOY plane
-  // 获取参数，XOY平面内最大允许的装甲版距离
   max_armor_distance_ = this->declare_parameter("max_armor_distance", 10.0);
 
   // Tracker
-  // 获取参数，最大匹配距离
   double max_match_distance = this->declare_parameter("tracker.max_match_distance", 0.15);
-  // 获取参数，最大匹配角度差
   double max_match_yaw_diff = this->declare_parameter("tracker.max_match_yaw_diff", 1.0);
-  // 创建Tracker对象
   tracker_ = std::make_unique<Tracker>(max_match_distance, max_match_yaw_diff);
-  // 获取参数，追踪阈值
   tracker_->tracking_thres = this->declare_parameter("tracker.tracking_thres", 5);
-  // 获取参数，丢失阈值
   lost_time_thres_ = this->declare_parameter("tracker.lost_time_thres", 0.3);
 
   // EKF
@@ -37,7 +27,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // state: xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r
   // measurement: xa, ya, za, yaw
   // f - Process function
-  // 创建Kalman滤波器的F矩阵
   auto f = [this](const Eigen::VectorXd & x) {
       Eigen::VectorXd x_new = x;
       x_new(0) += x(1) * dt_;
@@ -47,7 +36,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
       return x_new;
     };
   // J_f - Jacobian of process function
-  // 创建Kalman滤波器的F矩阵的雅克比矩阵
   auto j_f = [this](const Eigen::VectorXd &) {
       Eigen::MatrixXd f(9, 9);
       // clang-format off
@@ -64,7 +52,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
       return f;
     };
   // h - Observation function
-  // 创建Kalman滤波器的H矩阵
   auto h = [](const Eigen::VectorXd & x) {
       Eigen::VectorXd z(4);
       double xc = x(0), yc = x(2), yaw = x(6), r = x(8);
@@ -75,7 +62,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
       return z;
     };
   // J_h - Jacobian of observation function
-  // 创建Kalman滤波器的H矩阵的雅克比矩阵
   auto j_h = [](const Eigen::VectorXd & x) {
       Eigen::MatrixXd h(4, 9);
       double yaw = x(6), r = x(8);
@@ -89,7 +75,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
       return h;
     };
   // update_Q - process noise covariance matrix
-  // 创建Kalman滤波器的Q矩阵
   s2qxyz_ = declare_parameter("ekf.sigma2_q_xyz", 20.0);
   s2qyaw_ = declare_parameter("ekf.sigma2_q_yaw", 100.0);
   s2qr_ = declare_parameter("ekf.sigma2_q_r", 800.0);
@@ -114,7 +99,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
       return q;
     };
   // update_R - measurement noise covariance matrix
-  // 创建Kalman滤波器的R矩阵
   r_xyz_factor = declare_parameter("ekf.r_xyz_factor", 0.05);
   r_yaw = declare_parameter("ekf.r_yaw", 0.02);
   auto u_r = [this](const Eigen::VectorXd & z) {
@@ -124,16 +108,12 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
       return r;
     };
   // P - error estimate covariance matrix
-  // 创建Kalman滤波器的P矩阵
   Eigen::DiagonalMatrix<double, 9> p0;
   p0.setIdentity();
-  // 创建Kalman滤波器
   tracker_->ekf = ExtendedKalmanFilter{f, h, j_f, j_h, u_q, u_r, p0};
 
   // Subscriber with tf2 message_filter
-  // 订阅tf2消息
   // tf2 relevant
-  // tf2的relevant
   tf2_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   // Create the timer interface before call to waitForTransform,
   // to avoid a tf2_ros::CreateTimerInterfaceException exception
@@ -151,11 +131,9 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   tf2_filter_->registerCallback(&ArmorTrackerNode::armorsCallback, this);
 
   // Measurement publisher (for debug usage)
-  // 创建发布器，发布TrackerInfo消息
   info_pub_ = this->create_publisher<auto_aim_interfaces::msg::TrackerInfo>("/tracker/info", 10);
 
   // Publisher
-  // 创建发布器，发布Target消息
   target_pub_ = this->create_publisher<auto_aim_interfaces::msg::Target>(
     "/tracker/target", rclcpp::SensorDataQoS());
 
@@ -195,7 +173,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/tracker/marker", 10);
 
   //trajectory slover param
-  // 弹道解算器参数
   int max_iter = this->declare_parameter("trajectory.max_iter", 10);
   float stop_error = this->declare_parameter("trajectory.stop_error", 0.001);
   int R_K_iter = this->declare_parameter("trajectory.R_K_iter", 50);
@@ -205,37 +182,27 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   static_offset_pitch_ = this->declare_parameter("trajectory.static_offset.pitch", 0.0);
 
   //Get fire angle thres
-  // 获取参数，射击角度阈值
   yaw_angle_thres = this->declare_parameter("yaw_angle_thres", 25.0);
   fire_permit_thres = this->declare_parameter("fire_permit_thres", 1.5);
-  fire_latency = this->declare_parameter("fire_latenc3y", 0.02);
-  min_speed = this->declare_parameter("min_speed", 20.0);
+  fire_latency = this->declare_parameter("fire_latency", 0.02);
 
-  // 创建弹道解算器
   trajectory_slover_ =
     std::make_shared<TrajectorySlover>(max_iter, stop_error, R_K_iter, init_speed, is_hero);
 
-  // 创建订阅器，订阅子弹速度
-  // 回调函数为setBulletSpeed
   bullet_speed_sub_ = this->create_subscription<std_msgs::msg::Float64>(
     "/bullet_speed", 10,
     std::bind(&ArmorTrackerNode::setBulletSpeed, this, std::placeholders::_1));
 
-  // 创建订阅器，订阅延迟
   latency_sub_ = this->create_subscription<std_msgs::msg::Float64>(
     "/latency", 10, std::bind(&ArmorTrackerNode::setLatancy, this, std::placeholders::_1));
 }
 
-/// @brief 根据下位机的子弹速度，设置弹道解算器的子弹速度
-/// @param bulletspeed 订阅器接收子弹速度
 void ArmorTrackerNode::setBulletSpeed(const std_msgs::msg::Float64::SharedPtr bulletspeed)
 {
-  // 接收到子弹数据
+
   if (bulletspeed->data != 0) {
-    // 子弹速度与弹道解算器的子弹速度相差0.2
     auto diff = bulletspeed->data - trajectory_slover_->getBulletSpeed();
-    if ((diff > 0.2 || diff < -0.2) && bulletspeed->data > min_speed) {
-      // 设置弹道解算器的子弹速度
+    if (diff > 0.2 || diff < -0.2) {
       trajectory_slover_->setBulletSpeed(bulletspeed->data);
       RCLCPP_INFO(
         this->get_logger(), "set bullet speed: %.3f", trajectory_slover_->getBulletSpeed());
@@ -243,8 +210,6 @@ void ArmorTrackerNode::setBulletSpeed(const std_msgs::msg::Float64::SharedPtr bu
   }
 }
 
-/// @brief 设置延迟
-/// @param latency 订阅器接收延迟
 void ArmorTrackerNode::setLatancy(const std_msgs::msg::Float64::SharedPtr latency)
 {
   if (latency->data >= 0) {
@@ -252,19 +217,8 @@ void ArmorTrackerNode::setLatancy(const std_msgs::msg::Float64::SharedPtr latenc
   }
 }
 
-/// @brief 进行跟踪
-/// @param armors_msg armor_dedtector输入的装甲板消息
-/// @details 该函数进行跟踪，包括：
-/// 1. 坐标变换
-/// 2. 开始跟踪
-/// 3. 射击系统
-/// 4. 发布消息
 void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_msg)
 {
-
-  //////////////////
-  // 1. 坐标变换   //
-  //////////////////
 
   // Tranform armor position from image frame to world coordinate
   for (auto & armor : armors_msg->armors) {
@@ -280,7 +234,6 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
   }
 
   // Filter abnormal armors
-  // 过滤异常装甲板：高度大于1.2m，距离大于最大击打距离
   armors_msg->armors.erase(
     std::remove_if(
       armors_msg->armors.begin(), armors_msg->armors.end(),
@@ -293,156 +246,109 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
 
   //Get gimbal status
   //Tranform gimbal state from world coordinate
-  geometry_msgs::msg::TransformStamped transform_pitch;
+  geometry_msgs::msg::TransformStamped transform;
   try {
-    transform_pitch = tf2_buffer_->lookupTransform(
-      "shoot_pitch_link", target_frame_,
-      tf2::TimePointZero);
-    // auto orientation_gimbal = transform_pitch.transform.rotation;
-    // tf2::Quaternion q_;
-    // tf2::fromMsg(orientation_gimbal, q_);
-    // gimbal_yaw = -tf2::impl::getYaw(q_);
+    transform = tf2_buffer_->lookupTransform("pitch_link", target_frame_, tf2::TimePointZero);
+    auto orientation_gimbal = transform.transform.rotation;
+    tf2::Quaternion q_;
+    tf2::fromMsg(orientation_gimbal, q_);
+    gimbal_yaw = -tf2::impl::getYaw(q_);
     //RCLCPP_INFO(get_logger(), "gimbal_yaw : %lf", gimbal_yaw);
   } catch (const tf2::ExtrapolationException & ex) {
     RCLCPP_ERROR(get_logger(), "Error while transforming %s", ex.what());
     return;
   }
-
-  //Tranform gimbal state from world coordinate
-  geometry_msgs::msg::TransformStamped transform_yaw;
-  try {
-    transform_yaw =
-      tf2_buffer_->lookupTransform("shoot_yaw_link", target_frame_, tf2::TimePointZero);
-
-  } catch (const tf2::ExtrapolationException & ex) {
-    RCLCPP_ERROR(get_logger(), "Error while transforming %s", ex.what());
-    return;
-  }
-
-  //////////////////
-  // 2. 开始跟踪   //
-  //////////////////
-
   // Init message
-  // 初始化消息
-  auto_aim_interfaces::msg::TrackerInfo info_msg; // 用来发布跟踪信息
-  auto_aim_interfaces::msg::Target target_msg;    // 用来储存检测器计算出来的目标信息
-  rclcpp::Time time = armors_msg->header.stamp;   // 获取时间戳，该时间戳为图像消息的时间戳
-  target_msg.header.stamp = time;                 // Target消息的时间戳
-  target_msg.header.frame_id = target_frame_;     // Target消息的坐标系
+  auto_aim_interfaces::msg::TrackerInfo info_msg;
+  auto_aim_interfaces::msg::Target target_msg;
+  rclcpp::Time time = armors_msg->header.stamp;
+  target_msg.header.stamp = time;
+  target_msg.header.frame_id = target_frame_;
 
   // Update tracker
-  // 更新跟踪器
-  // 如果跟踪器状态为LOST，则初始化跟踪器  
   if (tracker_->tracker_state == Tracker::LOST) {
     tracker_->init(armors_msg);
     target_msg.tracking = false;
-  } else { // 如果跟踪器状态为DETECTING、TRACKING或TEMP_LOST，则更新跟踪器
+  } else {
     dt_ = (time - last_time_).seconds();
-    tracker_->lost_thres = static_cast<int>(lost_time_thres_ / dt_); // 将丢失阈值时间转化为次数
-    tracker_->update(armors_msg); // 更新跟踪器
+    tracker_->lost_thres = static_cast<int>(lost_time_thres_ / dt_);
+    tracker_->update(armors_msg);
 
     // Publish Info
-    // 发布TrackerInfo消息
-    info_msg.position_diff = tracker_->info_position_diff; // 位置差
-    info_msg.yaw_diff = tracker_->info_yaw_diff;          // 偏航角差
-    info_msg.position.x = tracker_->measurement(0);      // 装甲板x坐标
-    info_msg.position.y = tracker_->measurement(1);     // 装甲板y坐标
-    info_msg.position.z = tracker_->measurement(2);    // 装甲板z坐标
-    info_msg.yaw = tracker_->measurement(3);          // 装甲板偏航角
-    info_pub_->publish(info_msg);                    // 发布TrackerInfo消息
+    info_msg.position_diff = tracker_->info_position_diff;
+    info_msg.yaw_diff = tracker_->info_yaw_diff;
+    info_msg.position.x = tracker_->measurement(0);
+    info_msg.position.y = tracker_->measurement(1);
+    info_msg.position.z = tracker_->measurement(2);
+    info_msg.yaw = tracker_->measurement(3);
+    info_pub_->publish(info_msg);
 
-    // 根据跟踪器更新后的状态，进行分析
     if (tracker_->tracker_state == Tracker::DETECTING) {
-      // 如果还在检测中，则不进行任何操作
       target_msg.tracking = false;
-    } else if ( // 如果跟踪器状态为TRACKING或TEMP_LOST
+    } else if (
       tracker_->tracker_state == Tracker::TRACKING ||
       tracker_->tracker_state == Tracker::TEMP_LOST)
     {
-      // 设置为正在跟踪
       target_msg.tracking = true;
       // Fill target message
-      // 填充跟踪信息
-      const auto & state = tracker_->target_state; // 跟踪器的状态向量
-      target_msg.id = tracker_->tracked_id; // 跟踪器所跟踪的目标装甲板id
-      target_msg.armors_num = static_cast<int>(tracker_->tracked_armors_num); // 跟踪器所跟踪的目标机器人的装甲板数量，原先为enum，这里做强制类型转化
-      target_msg.position.x = state(0); // 跟踪器所跟踪的目标机器人的x坐标
-      target_msg.velocity.x = state(1); // 跟踪器所跟踪的目标机器人的x速度
-      target_msg.position.y = state(2); // 跟踪器所跟踪的目标机器人的y坐标
-      target_msg.velocity.y = state(3); // 跟踪器所跟踪的目标机器人的y速度
-      target_msg.position.z = state(4); // 跟踪器所跟踪的目标装甲板的z坐标
-      target_msg.velocity.z = state(5); // 跟踪器所跟踪的目标装甲板的z速度
-      target_msg.yaw = state(6);        // 跟踪器所跟踪的目标装甲板的偏航角
-      target_msg.v_yaw = state(7);      // 跟踪器所跟踪的目标装甲板的偏航角速度
-      target_msg.radius_1 = state(8);   // 跟踪器所跟踪的目标装甲板的半径1
-      target_msg.radius_2 = tracker_->another_r; // 跟踪器所跟踪的目标装甲板的半径2
-      target_msg.dz = tracker_->dz;     // 跟踪器所跟踪的目标装甲板的高度差
+      const auto & state = tracker_->target_state;
+      target_msg.id = tracker_->tracked_id;
+      target_msg.armors_num = static_cast<int>(tracker_->tracked_armors_num);
+      target_msg.position.x = state(0);
+      target_msg.velocity.x = state(1);
+      target_msg.position.y = state(2);
+      target_msg.velocity.y = state(3);
+      target_msg.position.z = state(4);
+      target_msg.velocity.z = state(5);
+      target_msg.yaw = state(6);
+      target_msg.v_yaw = state(7);
+      target_msg.radius_1 = state(8);
+      target_msg.radius_2 = tracker_->another_r;
+      target_msg.dz = tracker_->dz;
     }
   }
 
-  // 记录时间戳用于下一次计算
   last_time_ = time;
 
-  //////////////////
-  // 3. 射击系统   //
-  //////////////////
-
-  // 1. 判断是否跟踪
   if (target_msg.tracking == true) {
 
-    // 2. 保存目标状态
     //save target states
-    Eigen::Vector3d now_car_pos = Eigen::Vector3d( // 当前目标机器人位置
+    Eigen::Vector3d now_car_pos = Eigen::Vector3d(
       target_msg.position.x,
       target_msg.position.y,
       target_msg.position.z);
-    Eigen::Vector3d now_car_vec = Eigen::Vector3d( // 当前目标机器人速度
+    Eigen::Vector3d now_car_vec = Eigen::Vector3d(
       target_msg.velocity.x,
       target_msg.velocity.y,
       target_msg.velocity.z);
-    double armor_yaw = target_msg.yaw; // 当前目标装甲板偏航角
-    double car_w = target_msg.v_yaw;  // 当前目标机器人偏航角速度
+    double armor_yaw = target_msg.yaw;
+    double car_w = target_msg.v_yaw;
 
-    // 3. 计算预测的目标位置，该部分是因为从计算出目标位置到机器人发射子弹击中目标存在延迟，因此需要预测目标位置
+    RCLCPP_INFO(get_logger(), "distance : %lf", (now_car_pos.norm() - target_msg.radius_1));
+    RCLCPP_INFO(get_logger(), "speed : %lf", trajectory_slover_->getBulletSpeed());
     //save the pred target
-    double pred_dt = // 预测时间间隔，它是基于延迟、子弹的速度和目标与机器人之间的距离来计算的
+    double pred_dt =
       fire_latency + latency_ / 1000 + (now_car_pos.norm() - target_msg.radius_1) /
       trajectory_slover_->getBulletSpeed();
-    // 在预测的时间pred_dt后，目标预期的位置
+    RCLCPP_INFO(get_logger(), "latency : %lf", latency_ / 1000.0);
     Eigen::Vector3d pred_car_pos = now_car_pos + now_car_vec * pred_dt;
-    // 在预测的时间pred_dt后，目标预期的偏航角
     double pred_yaw = armor_yaw + car_w * pred_dt;
-    // 预测位置的偏航角度与机器人的偏航角度之差
-    car_center_diff = calcYawAndPitch(pred_car_pos)[0];
-    double r1 = target_msg.radius_1; // 半径1
-    double r2 = target_msg.radius_2; // 半径2
-    double dz = target_msg.dz;       // 相邻装甲板高度差
+    auto car_center_diff = calcYawAndPitch(pred_car_pos);
+    double r1 = target_msg.radius_1, r2 = target_msg.radius_2;
+    double dz = target_msg.dz;
 
-    Eigen::Vector3d armor_target_min_dis;
-    Eigen::Vector3d armor_target;
-    Eigen::Vector3d pred_armor_pos; // 预测的装甲板位置信息，在有四块装甲板的情况下，该变量的z坐标会发生变化
-    Eigen::Vector3d armor_target_min_yaw_diff;
-    //double min_dis_yaw;
-    double min_yaw_diff = DBL_MAX;
-    bool is_current_pair = true; // 用来记录装甲板切换
-    size_t a_n = target_msg.armors_num; // 目标装甲板数量
-    //double min_distance_armor = DBL_MAX;
-    //double min_yaw_diff_armor = DBL_MAX;
-    double r = 0; // 用来记录当前待击打装甲板的半径
-    // 循环，有多少块装甲板就循环多少次
+    Eigen::Vector3d armor_target_min_dis, armor_target, pred_armor_pos;
+    double min_dis_yaw;
+    bool is_current_pair = true;
+    size_t a_n = target_msg.armors_num;
+    double min_distance_armor = DBL_MAX;
+    double r = 0;
     for (size_t i = 0; i < a_n; i++) {
-      // 整车估计所有装甲板中，当前遍历到的装甲板的位置
       double tmp_yaw = pred_yaw + i * (2 * M_PI / a_n);
       // Only 4 armors has 2 radius and height
-      // 如果装甲板数量为4，则需要考虑相邻装甲板有两个半径
       if (a_n == 4) {
-        // 判断记录第一块还是第二块装甲板
         r = is_current_pair ? r1 : r2;
-        // 如果是第二块装甲板，则z的值要加上dz
         pred_armor_pos[2] = pred_car_pos[2] + (is_current_pair ? 0 : dz);
-        // 切换
-        // 执行完四次之后还是true
         is_current_pair = !is_current_pair;
       } else {
         r = r1;
@@ -458,60 +364,41 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
       }
 
       //get minimum distance target
-      // double armor_distance = pred_armor_pos.norm();
-      // if(armor_distance < min_distance_armor)
-      // {
-      //   min_distance_armor = armor_distance;
-      //   armor_target_min_dis = pred_armor_pos;
-      //   //min_distance_target_num = i;
-      //   min_dis_yaw = a_yaw;
-      // }
-      auto tmp_yaw_diff = fabs(a_yaw - car_center_diff);
-      if (tmp_yaw_diff < min_yaw_diff) {
-        min_yaw_diff = tmp_yaw_diff;
-        armor_target_min_yaw_diff = pred_armor_pos;
+      double armor_distance = pred_armor_pos.norm();
+      if (armor_distance < min_distance_armor) {
+        min_distance_armor = armor_distance;
+        armor_target_min_dis = pred_armor_pos;
         //min_distance_target_num = i;
+        min_dis_yaw = a_yaw;
       }
     }
 
-    //Tracked permit
-    // 确定是否追踪
-    armor_target = armor_target_min_yaw_diff;
+    //tracked permit
+    armor_target = armor_target_min_dis;
+    auto a2c_yaw_diff = fabs(min_dis_yaw - car_center_diff[0]);
     bool tracked_permit = 0;
-    if (rad2deg(min_yaw_diff) < yaw_angle_thres) { // 如果与机器人中心的偏航角度差值小于预定的阈值
-      tracked_permit = 1; // 设置为可以追踪
+    if (rad2deg(a2c_yaw_diff) < yaw_angle_thres) {
+      tracked_permit = 1;
     }
 
-    // 5.转换坐标系，将目标位置从世界坐标系转换为云台的坐标系
     //Transform world frame to pitch frame
     geometry_msgs::msg::Vector3Stamped point_target, armor_target_tf;
     point_target.vector.x = armor_target(0);
     point_target.vector.y = armor_target(1);
     point_target.vector.z = armor_target(2);
-
-    tf2::doTransform(point_target, armor_target_tf, transform_pitch);
+    tf2::doTransform(point_target, armor_target_tf, transform);
     Eigen::Vector3d armor_target_pitch_link;
     armor_target_pitch_link(0) = armor_target_tf.vector.x;
     armor_target_pitch_link(1) = armor_target_tf.vector.y;
     armor_target_pitch_link(2) = armor_target_tf.vector.z;
 
-    Eigen::Vector3d armor_target_yaw_link;
-    tf2::doTransform(point_target, armor_target_tf, transform_yaw);
-    armor_target_yaw_link(0) = armor_target_tf.vector.x;
-    armor_target_yaw_link(1) = armor_target_tf.vector.y;
-    armor_target_yaw_link(2) = armor_target_tf.vector.z;
-
-    // 6. 计算偏移角度
-    // Get offset
-    // 计算机器人需要调整的云台角度以达到目标位置
+    //Get offset
     Eigen::Vector2d angel_diff = calcYawAndPitch(armor_target_pitch_link);
     auto trajectory_pitch = (-trajectory_slover_->calcPitchCompensate(armor_target));
 
-    // 7. 设置射击许可
-    // Set fire permit
+    //Set fire permit
     int8_t fire_permit = 0;
     if (fabs(angel_diff[0]) < fire_permit_thres && tracked_permit) {
-      // 如果偏移角度在一个预定义的阈值内，并且目标被追踪，则允许射击
       fire_permit = 1;
     }
 
@@ -520,33 +407,20 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     target_msg.offset_pitch = rad2deg((double)angel_diff(1)) + trajectory_pitch +
       static_offset_pitch_;
 
-    // 8. 记录有关偏移、射击许可和其他参数的信息
     RCLCPP_INFO(this->get_logger(), "trajectory_pitch : %lf", trajectory_pitch);
     RCLCPP_INFO(
       this->get_logger(), "offset_pitch : %lf , offset_yaw : %lf", target_msg.offset_pitch,
       target_msg.offset_yaw);
-    RCLCPP_INFO(this->get_logger(), "fire_permit : %d", fire_permit);
-    RCLCPP_INFO(get_logger(), "distance : %lf", (now_car_pos.norm() - target_msg.radius_1));
-    RCLCPP_INFO(get_logger(), "speed : %lf", trajectory_slover_->getBulletSpeed());
-    RCLCPP_INFO(get_logger(), "latency : %lf", latency_ / 1000.0);
-    //RCLCPP_INFO(this->get_logger(), "tracked_permit : %d", tracked_permit);
-    // RCLCPP_INFO(this->get_logger(), "car_center_diff : %lf", rad2deg(car_center_diff));
-    // RCLCPP_INFO(this->get_logger(), "min_yaw_diff : %lf", rad2deg(min_yaw_diff));
+
     //RCLCPP_INFO(this->get_logger(), "yaw_angle_thres : %lf", yaw_angle_thres);
     //RCLCPP_INFO(this->get_logger(), "fire_permit_thres : %lf", fire_permit_thres);
     //RCLCPP_INFO(this->get_logger(), "fire_latency : %lf", fire_latency);
+    RCLCPP_INFO(this->get_logger(), "fire_permit : %d", fire_permit);
 
-    //////////////////
-    // 4. 发布消息   //
-    //////////////////
-
-    // 发布Target消息
     if (!(isnan(target_msg.offset_yaw) || isnan(target_msg.offset_pitch))) {
-      // 如果偏移角度不是nan，则发布Target消息
       target_pub_->publish(target_msg);
     }
 
-    // 发布可视化Marker消息
     publishMarkers(target_msg);
   }
 }
@@ -577,7 +451,7 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & t
       target_msg.velocity.z);
 
     double pred_dt =
-      fire_latency + latency_ / 1000.0 + (now_car_pos.norm() - target_msg.radius_1) /
+      fire_latency + latency_ / 1000 + (now_car_pos.norm() - target_msg.radius_1) /
       trajectory_slover_->getBulletSpeed();
     double pred_yaw = yaw + car_w * pred_dt;
     Eigen::Vector3d pred_car_pos = now_car_pos + now_car_vec * pred_dt;
@@ -605,7 +479,6 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & t
     angular_v_marker_.points.emplace_back(arrow_end);
 
     armor_marker_.action = visualization_msgs::msg::Marker::ADD;
-    armor_marker_.points.clear();
     armor_marker_.scale.y = tracker_->tracked_armor.type == "small" ? 0.135 : 0.23;
     bool is_current_pair = true;
     size_t a_n = target_msg.armors_num;
@@ -640,9 +513,8 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & t
     is_current_pair = true;
     Eigen::Vector3d pred_p_a;
     geometry_msgs::msg::Point target_p_a;
-    double min_yaw_diff = DBL_MAX;
+    double min_distance_armor = DBL_MAX;
     r = 0;
-    tf2::Quaternion q;
     for (size_t i = 0; i < a_n; i++) {
       double tmp_yaw = pred_yaw + i * (2 * M_PI / a_n);
       // Only 4 armors has 2 radius and height
@@ -657,25 +529,27 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & t
       pred_p_a[0] = pred_car_pos[0] - r * cos(tmp_yaw);
       pred_p_a[1] = pred_car_pos[1] - r * sin(tmp_yaw);
 
-      //Get armor yaw
+      //get armor yaw
       double a_yaw = tmp_yaw;
       if (a_yaw >= M_PI) {
         a_yaw -= 2.0 * M_PI;
       }
 
-      //Get min yaw armor
-      auto tmp_yaw_diff = fabs(a_yaw - car_center_diff);
-      if (tmp_yaw_diff < min_yaw_diff) {
-        min_yaw_diff = tmp_yaw_diff;
+      //get minimum distance target
+      double armor_distance = pred_p_a.norm();
+      if (armor_distance < min_distance_armor) {
+        min_distance_armor = armor_distance;
         target_p_a.x = pred_p_a[0];
         target_p_a.y = pred_p_a[1];
         target_p_a.z = pred_p_a[2];
+        //min_distance_target_num = i;
+        pred_armor_marker_.id = i;
+        pred_armor_marker_.pose.position = target_p_a;
+        tf2::Quaternion q;
         q.setRPY(0, target_msg.id == "outpost" ? -0.26 : 0.26, tmp_yaw);
-
+        pred_armor_marker_.pose.orientation = tf2::toMsg(q);
       }
     }
-    pred_armor_marker_.pose.position = target_p_a;
-    pred_armor_marker_.pose.orientation = tf2::toMsg(q);
     marker_array.markers.emplace_back(pred_armor_marker_);
   } else {
     position_marker_.action = visualization_msgs::msg::Marker::DELETE;

@@ -13,9 +13,10 @@
 #include <tf2/convert.h>
 #include <tf2/impl/utils.h>
 #include <tf2/utils.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <rclcpp/rclcpp.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 // STD
@@ -35,18 +36,12 @@ using tf2_filter = tf2_ros::MessageFilter<auto_aim_interfaces::msg::Armors>;
 class ArmorTrackerNode : public rclcpp::Node
 {
 public:
-  // 构造函数
   explicit ArmorTrackerNode(const rclcpp::NodeOptions & options);
 
 private:
   inline double deg2rad(double deg) {return deg / 180.0 * M_PI;}
   inline double rad2deg(double rad) {return (rad * 180.0) / M_PI;}
 
-  /**
-   * @brief 计算相一个3D点相对于坐标原点的偏航和俯仰角
-   * @param point_cam 相对于相机坐标系的3D点
-   * @return 2D向量，偏航角yaw和俯仰角pitch
-   */
   Eigen::Vector2d calcYawAndPitch(const Eigen::Vector3d & point_cam)
   {
     Eigen::Vector2d offset_angle;
@@ -56,31 +51,19 @@ private:
     offset_angle << offset_yaw, offset_pitch;
     return offset_angle;
   }
-
   void armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_ptr);
 
   void publishMarkers(const auto_aim_interfaces::msg::Target & target_msg);
 
-  /**
-   * @brief 根据下位机的子弹速度，设置弹道解算器的子弹速度
-   * @param bulletspeed 下位机的子弹速度
-   */
   void setBulletSpeed(const std_msgs::msg::Float64::SharedPtr bulletspeed);
 
-  /**
-   * @brief 设置延迟
-   * @param latency 订阅器接收延迟
-   */
   void setLatancy(const std_msgs::msg::Float64::SharedPtr latency);
 
   // Maximum allowable armor distance in the XOY plane
-  // 最大击打距离
   double max_armor_distance_;
 
   // The time when the last message was received
-  // 上一次接收到消息的时间
   rclcpp::Time last_time_;
-  // 上一次时间到现在的时间差
   double dt_;
   double latency_ = 0.0;
 
@@ -122,14 +105,6 @@ private:
   double yaw_angle_thres;
   double fire_permit_thres;
   double fire_latency;
-
-  //speed thres
-  double min_speed;
-
-  //car_center_angle
-  // 记录机器人转向目标的yaw角度之差
-  double car_center_diff;
-
   //trajectory_slover
   std::shared_ptr<TrajectorySlover> trajectory_slover_;
 

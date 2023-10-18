@@ -1,0 +1,6 @@
+/virtual_serial_driver:
+  ros__parameters:
+    bullet_speed: 26.5
+    enemy_color: 66
+    pitch_joint: 0.0
+    yaw_joint: 0.5

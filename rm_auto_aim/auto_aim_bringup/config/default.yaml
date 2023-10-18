@@ -1,7 +1,7 @@
 /armor_detector:
   ros__parameters:
     debug: true
-    detect_color: 0
+    detect_color: 1
     min_lightness: 120
     classifier_threshold: 0.8
     ignore_classes: ["negative"]
@@ -56,7 +56,7 @@
       stop_error : 0.001
       R_K_iter : 50
       init_bullet_speed : 26.5
-      is_hero: false
+      is_hero: true
       static_offset:
         yaw : 0.5
         pitch : 0.0

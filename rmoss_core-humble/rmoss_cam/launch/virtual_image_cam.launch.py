@@ -20,7 +20,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    image_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'shot.png')
+    image_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'test.jpg')
     video_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'bubing.mp4')
     calibration_path = 'package://rmoss_cam/resource/image_cam_calibration.yaml'
     virtual_image_cam = Node(
@@ -28,9 +28,11 @@ def generate_launch_description():
         executable='virtual_cam',
         name='virtual_image_cam',
         parameters=[
-            {'video_path': video_path,
-             'camera_name': 'front_camera',
+            {'image_path': image_path,
+             'video_path': video_path,
+             'camera_name': '',
              'camera_info_url': calibration_path,
+             'frame_id': 'camera_optical_link',
              'fps': 30,
              'autostart': True}],
         output='screen'
