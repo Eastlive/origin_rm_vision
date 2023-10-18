@@ -169,7 +169,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /processor/marker
+        Value: /tracker/marker
       Value: true
   Enabled: true
   Global Options:
