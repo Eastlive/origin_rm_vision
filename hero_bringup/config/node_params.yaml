@@ -19,10 +19,9 @@
        b: 120
        g: 110
        r: 135
+
 /virtual_cam_node:
     ros__parameters:
-        image_path : "package://rmoss_cam/resource/shot.png"
-        video_path : "package://rmoss_cam/resource/hero.avi"
         camera_name: ""
         frame_id: 'camera_optical_link'
         autostart: true
