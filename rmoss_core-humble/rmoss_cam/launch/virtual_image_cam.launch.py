@@ -20,7 +20,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    image_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'test.jpg')
+    image_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'shot.png')
     video_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'bubing.mp4')
     calibration_path = 'package://rmoss_cam/resource/image_cam_calibration.yaml'
     config_path = os.path.join(get_package_share_directory('rmoss_cam'), 'config', 'cam_params.yaml')

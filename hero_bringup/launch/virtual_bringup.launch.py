@@ -16,12 +16,13 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 def generate_launch_description():
     param_path = os.path.join(get_package_share_directory(
         "hero_bringup"), "config/node_params.yaml")
+    image_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'shot.png')
+    video_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'bubing.mp4')
 
     with open(param_path, 'r') as f:
-        mvcam_params = yaml.safe_load(f)['/mv_cam_node']['ros__parameters']
-        print(mvcam_params)
+        virtual_cam_params = yaml.safe_load(f)['/virtual_cam_node']['ros__parameters']
     with open(param_path, 'r') as f:
-        serial_params = yaml.safe_load(f)['/serial_driver']['ros__parameters']
+        virtual_serial_params = yaml.safe_load(f)['/virtual_serial_driver']['ros__parameters']
     with open(param_path, 'r') as f:
         detector_params = yaml.safe_load(f)['/armor_detector']['ros__parameters']
     with open(param_path, 'r') as f:
@@ -64,16 +65,21 @@ def generate_launch_description():
         target_container='rm_container',
         composable_node_descriptions=[
             ComposableNode(
-                package='mindvision_camera',
-                plugin='mindvision_camera::MVCameraNode',
-                name='mindvision_camera',
-                parameters=[mvcam_params],
+                package='rmoss_cam',
+                plugin='rmoss_cam::VirtualCamNode',
+                name='rmoss_camera',
+                parameters=[virtual_cam_params,
+                            {'image_path': image_path,
+                             'video_path': video_path,
+                             'camera_info_url': 'package://hero_bringup/config/camera_info.yaml',
+                             'fps': 30,
+                             }],
             ),
             ComposableNode(
-                package='rm_serial_driver',
-                plugin='rm_serial_driver::RMSerialDriver',
-                name='rm_serial_driver',
-                parameters=[serial_params],
+                package='virtual_serial_driver',
+                plugin='virtual_serial_driver::VirtualSerialDriver',
+                name='virtual_serial_driver',
+                parameters=[virtual_serial_params],
             ),
             ComposableNode(
                 package='armor_detector',

@@ -19,6 +19,14 @@
        b: 120
        g: 110
        r: 135
+/virtual_cam_node:
+    ros__parameters:
+        image_path : "package://rmoss_cam/resource/shot.png"
+        video_path : "package://rmoss_cam/resource/hero.avi"
+        camera_name: ""
+        frame_id: 'camera_optical_link'
+        autostart: true
+        use_image_transport_camera_publisher: true
 
 /serial_driver:
   ros__parameters:
@@ -28,6 +36,13 @@
     flow_control: none
     parity: none
     stop_bits: "1"
+
+/virtual_serial_driver:
+  ros__parameters:
+    bullet_speed: 26.5
+    enemy_color: 82
+    pitch_joint: 0.0
+    yaw_joint: 0.0
 
 /armor_detector:
   ros__parameters:

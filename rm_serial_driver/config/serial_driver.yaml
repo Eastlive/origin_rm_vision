@@ -1,7 +1,7 @@
 /rm_serial_driver:
   ros__parameters:
     debug_mode: true
-    device_name: /dev/ttySerialCom
+    device_name: /dev/ttyACM0
     baud_rate: 115200
     flow_control: none
     parity: none

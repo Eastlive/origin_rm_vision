@@ -9,7 +9,7 @@ usb_cam:
 
 virtual_cam:
     ros__parameters:
-        image_path : "package://rmoss_cam/resource/test.jpg"
+        image_path : "package://rmoss_cam/resource/shot.png"
         video_path : "package://rmoss_cam/resource/hero.avi"
         camera_name: ""
         frame_id: 'camera_optical_link'
