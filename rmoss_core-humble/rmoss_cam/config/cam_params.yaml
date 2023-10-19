@@ -7,8 +7,11 @@ usb_cam:
         fps: 20
         autostart: true
 
-virtual_video_cam:
+virtual_cam:
     ros__parameters:
-        video_path : "../resource/hero.avi"
+        image_path : "package://rmoss_cam/resource/test.jpg"
+        video_path : "package://rmoss_cam/resource/hero.avi"
         camera_name: ""
+        frame_id: 'camera_optical_link'
         autostart: true
+        use_image_transport_camera_publisher: true

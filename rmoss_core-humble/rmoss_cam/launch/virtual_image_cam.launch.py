@@ -23,20 +23,21 @@ def generate_launch_description():
     image_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'test.jpg')
     video_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'bubing.mp4')
     calibration_path = 'package://rmoss_cam/resource/image_cam_calibration.yaml'
-    virtual_image_cam = Node(
+    config_path = os.path.join(get_package_share_directory('rmoss_cam'), 'config', 'cam_params.yaml')
+
+    print(config_path)
+    virtual_cam = Node(
         package='rmoss_cam',
         executable='virtual_cam',
-        name='virtual_image_cam',
-        parameters=[
+        name='virtual_cam',
+        parameters=[config_path,
             {'image_path': image_path,
              'video_path': video_path,
-             'camera_name': '',
              'camera_info_url': calibration_path,
-             'frame_id': 'camera_optical_link',
              'fps': 30,
-             'autostart': True}],
+             }],
         output='screen'
     )
     ld = LaunchDescription()
-    ld.add_action(virtual_image_cam)
+    ld.add_action(virtual_cam)
     return ld
