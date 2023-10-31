@@ -16,7 +16,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 def generate_launch_description():
     param_path = os.path.join(get_package_share_directory(
         "hero_bringup"), "config/node_params.yaml")
-    image_path = os.path.join(get_package_share_directory('rmoss_cam'), 'resource', 'shot.png')
+    image_path = os.path.join(get_package_share_directory('hero_bringup'), 'resource', 'yunhao2.png')
     video_path = os.path.join(get_package_share_directory('hero_bringup'), 'resource', 'outpost.avi')
 
     with open(param_path, 'r') as f:
@@ -69,7 +69,7 @@ def generate_launch_description():
                 plugin='rmoss_cam::VirtualCamNode',
                 name='rmoss_camera',
                 parameters=[virtual_cam_params,
-                            {
+                            {'image_path': image_path,
                              'video_path': video_path,
                              'camera_info_url': 'package://hero_bringup/config/camera_info.yaml',
                              'fps': 30,

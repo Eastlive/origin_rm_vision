@@ -78,7 +78,7 @@
       max_match_yaw_diff: 1.0
 
       tracking_thres: 5
-      lost_time_thres: 1.0
+      lost_time_thres: 3.0
 
     trajectory:
       max_iter : 10 

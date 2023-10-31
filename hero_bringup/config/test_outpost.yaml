@@ -1,0 +1,30 @@
+/virtual_cam:
+    ros__parameters:
+        camera_name: ""
+        frame_id: 'camera_optical_link'
+        autostart: true
+        use_image_transport_camera_publisher: true
+
+/armor_detector:
+  ros__parameters:
+    debug: true
+    detect_color: 0 # 0 for red, 1 for blue
+    binary_thres: 80
+    min_lightness: 120
+    classifier_threshold: 0.8
+    ignore_classes: ["negative"]
+
+    light:
+      max_angle: 40.0
+      max_ratio: 0.4
+      min_ratio: 0.1
+
+    armor:
+      max_angle: 35.0
+      max_center_ratio: 1.6
+      min_center_ratio: 0.4
+      min_light_ratio: 0.8
+      max_large_center_distance: 5.0
+      min_large_center_distance: 3.2
+      max_small_center_distance: 3.2
+      min_small_center_distance: 0.8
