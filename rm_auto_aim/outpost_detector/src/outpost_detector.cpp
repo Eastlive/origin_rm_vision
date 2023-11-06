@@ -74,8 +74,8 @@ OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions& options)
   armor_marker_.ns = "armors";
   armor_marker_.action = visualization_msgs::msg::Marker::ADD;
   armor_marker_.type = visualization_msgs::msg::Marker::CUBE;
-  armor_marker_.scale.x = 0.05;
-  armor_marker_.scale.y = 0.235;
+  armor_marker_.scale.x = 0.045;
+  armor_marker_.scale.y = 0.135;
   armor_marker_.scale.z = 0.125;
   armor_marker_.color.a = 1.0;
   armor_marker_.color.r = 1.0;
@@ -135,7 +135,10 @@ void OutpostDetectorNode::timerCallback()
 
   for (int i = 0; i < 3; i++)
   {
-    armors_msg_.armors.emplace_back(armor_msg_[i]);
+    if(armor_msg_[i].pose.position.z < outpost_z_ - radius * sin(M_PI / 10))
+    {
+      armors_msg_.armors.emplace_back(armor_msg_[i]);
+    }
   }
 
   armors_pub_->publish(armors_msg_);
@@ -172,11 +175,12 @@ void OutpostDetectorNode::publishMarkers()
   {
     armor_marker_.id = i;
     armor_marker_.pose = armor_msg_[i].pose;
-    if (publish_armors_[i])
+    if (armor_msg_[i].pose.position.z < outpost_z_ - radius * sin(M_PI / 10))
     {
       armor_marker_.color.r = 1.0;
       armor_marker_.color.g = 0.0;
       armor_marker_.color.b = 0.0;
+      armor_marker_.color.a = 1.0;
     }
     else
     {
@@ -188,11 +192,11 @@ void OutpostDetectorNode::publishMarkers()
     marker_array_.markers.emplace_back(armor_marker_);
   }
 
-  direction_marker_.header = armors_msg_.header;
-  direction_marker_.id = 1;
-  direction_marker_.pose = armor_msg_[0].pose;
+  // direction_marker_.header = armors_msg_.header;
+  // direction_marker_.id = 1;
+  // direction_marker_.pose = armor_msg_[0].pose;
 
-  marker_array_.markers.emplace_back(direction_marker_);
+  // marker_array_.markers.emplace_back(direction_marker_);
 
   marker_pub_->publish(marker_array_);
 }

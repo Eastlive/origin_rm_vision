@@ -38,7 +38,7 @@
 
 /virtual_serial_driver:
   ros__parameters:
-    bullet_speed: 26.5
+    bullet_speed: 16.0
     enemy_color: 82
     pitch_joint: 0.0
     yaw_joint: 0.0
@@ -46,8 +46,8 @@
 /virtual_outpost:
   ros__parameters:
     outpost_x: 0.0
-    outpost_y: 0.0
-    outpost_z: 1.5
+    outpost_y: -1.0
+    outpost_z: 5.5
     orientation_x: 0.56098552679693100
     orientation_y: -0.56098552679693100
     orientation_z: 0.43045933457687941
