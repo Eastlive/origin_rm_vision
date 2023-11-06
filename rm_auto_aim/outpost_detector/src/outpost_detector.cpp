@@ -21,14 +21,23 @@ OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions& options) : N
 {
   RCLCPP_INFO(this->get_logger(), "Outpost detector node started.");
 
-  x = declare_parameter("outpost_x", 0.0);
-  y = declare_parameter("outpost_y", 0.0);
-  z = declare_parameter("outpost_z", 2.5);
+  outpost_x_ = declare_parameter("outpost_x", 0.0);
+  outpost_y_ = declare_parameter("outpost_y", 0.0);
+  outpost_z_ = declare_parameter("outpost_z", 2.5);
 
-  orientation[0] = declare_parameter("orientation_x", -0.6335811);
-  orientation[1] = declare_parameter("orientation_y", 0.6335811);
-  orientation[2] = declare_parameter("orientation_z", 0.0);
-  orientation[3] = declare_parameter("orientation_w", 0.4440158);
+  orientation[0] = declare_parameter("orientation_x", 0.56098552679693100);
+  orientation[1] = declare_parameter("orientation_y", -0.56098552679693100);
+  orientation[2] = declare_parameter("orientation_z", 0.43045933457687941);
+  orientation[3] = declare_parameter("orientation_w", 0.43045933457687941);
+
+  armors_msg_.armors.resize(3);
+  armors_msg_.armors[2].pose.position.x = outpost_x_;
+  armors_msg_.armors[2].pose.position.y = outpost_y_;
+  armors_msg_.armors[2].pose.position.z = outpost_z_;
+  armors_msg_.armors[2].pose.orientation.x = orientation[0];
+  armors_msg_.armors[2].pose.orientation.y = orientation[1];
+  armors_msg_.armors[2].pose.orientation.z = orientation[2];
+  armors_msg_.armors[2].pose.orientation.w = orientation[3];
 
   armors_pub_ = this->create_publisher<auto_aim_interfaces::msg::Armors>("/detector/armors", rclcpp::SensorDataQoS());
 
@@ -68,6 +77,7 @@ void OutpostDetectorNode::timerCallback()
 {
   // RCLCPP_INFO(this->get_logger(), "Start Timer Callback!");
 
+
   armors_msg_.header.frame_id = "camera_optical_link";
   armors_msg_.header.stamp = this->now();
 
@@ -93,20 +103,42 @@ void OutpostDetectorNode::timerCallback()
   armors_msg_.armors[1].pose.orientation.y = -0.5;
   armors_msg_.armors[1].pose.orientation.z = 0.5;
   armors_msg_.armors[1].pose.orientation.w = 0.5;
-  armors_pub_->publish(armors_msg_);
 
   armors_msg_.armors[2].number = "outpost";
   armors_msg_.armors[2].type = "small";
-  armors_msg_.armors[2].pose.position.x = get_parameter("outpost_x").as_double();
-  armors_msg_.armors[2].pose.position.y = get_parameter("outpost_y").as_double();
-  armors_msg_.armors[2].pose.position.z = get_parameter("outpost_z").as_double();
   armors_msg_.armors[2].distance_to_image_center = 1000;
-  armors_msg_.armors[2].pose.orientation.x = -0.130526192220051;
-  armors_msg_.armors[2].pose.orientation.y = 0.0;
-  armors_msg_.armors[2].pose.orientation.z = 0.0;
-  armors_msg_.armors[2].pose.orientation.w = 0.99144486137381;
+
+  dt_ = this->now().seconds() - last_time_;
+  last_time_ = this->now().seconds();
+  RCLCPP_INFO(this->get_logger(), "dt: %f", dt_);
+  RCLCPP_INFO(this->get_logger(), "angle_speed: %f", angle_speed);
+  RCLCPP_INFO(this->get_logger(), "angle_speed * dt_: %f", angle_speed * dt_);
+  rotate(armors_msg_.armors[2].pose, angle_speed * dt_);
+
+  armors_pub_->publish(armors_msg_);
 
   publishMarkers();
+}
+
+void OutpostDetectorNode::rotate(geometry_msgs::msg::Pose & pose, double angle)
+{
+  // 四元数相乘
+  tf2::Quaternion q(0, sin(angle / 2), 0, cos(angle / 2));
+  tf2::Quaternion q_pose(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
+  q_pose = q * q_pose;
+  pose.orientation.x = q_pose.x();
+  pose.orientation.y = q_pose.y();
+  pose.orientation.z = q_pose.z();
+  pose.orientation.w = q_pose.w();
+
+  now_angle_ += angle;
+  pose.position.x = outpost_x_ - radius * sin(now_angle_);
+  pose.position.y = outpost_y_;
+  pose.position.z = outpost_z_ - radius * cos(now_angle_);
+  // RCLCPP_INFO(this->get_logger(), "roll: %f, pitch: %f, yaw: %f", roll / M_PI * 180, pitch / M_PI * 180, yaw / M_PI * 180);
+  // RCLCPP_INFO(this->get_logger(), "x: %f, y: %f, z: %f", pose.position.x, pose.position.y, pose.position.z);
+  // RCLCPP_INFO(this->get_logger(), "radius: %f", radius);
+  // RCLCPP_INFO(this->get_logger(), "cos(yaw): %f, sin(yaw): %f", cos(yaw), sin(yaw));
 }
 
 void OutpostDetectorNode::publishMarkers()
@@ -135,7 +167,7 @@ void OutpostDetectorNode::publishMarkers()
 
   direction_marker_.header = armors_msg_.header;
   direction_marker_.id = 1;
-  direction_marker_.pose = armors_msg_.armors[0].pose;
+  direction_marker_.pose = armors_msg_.armors[2].pose;
 
   marker_array_.markers.emplace_back(direction_marker_);
 

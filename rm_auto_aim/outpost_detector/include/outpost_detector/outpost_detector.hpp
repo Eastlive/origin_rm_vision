@@ -32,15 +32,20 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
   void publishMarkers();
 
-  double x;
-  double y;
-  double z;
-
-  double roll;
-  double pitch;
-  double yaw;
+  double outpost_x_;
+  double outpost_y_;
+  double outpost_z_;
 
   double orientation[4];
+
+  void rotate(geometry_msgs::msg::Pose & pose, double angle);
+
+  const double radius = 0.2765;
+  const double angle_speed = 0.8 * M_PI;
+  double now_angle_ = 0;
+
+  double last_time_;
+  double dt_;
 };
 
 }  // namespace rm_auto_aim
