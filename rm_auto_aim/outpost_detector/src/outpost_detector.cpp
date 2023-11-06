@@ -71,7 +71,7 @@ void OutpostDetectorNode::timerCallback()
   armors_msg_.header.frame_id = "camera_optical_link";
   armors_msg_.header.stamp = this->now();
 
-  armors_msg_.armors.resize(1);
+  armors_msg_.armors.resize(3);
   armors_msg_.armors[0].number = "outpost";
   armors_msg_.armors[0].type = "small";
   armors_msg_.armors[0].pose.position.x = get_parameter("outpost_x").as_double();
@@ -82,7 +82,29 @@ void OutpostDetectorNode::timerCallback()
   armors_msg_.armors[0].pose.orientation.y = orientation[1];
   armors_msg_.armors[0].pose.orientation.z = orientation[2];
   armors_msg_.armors[0].pose.orientation.w = orientation[3];
+
+  armors_msg_.armors[1].number = "outpost";
+  armors_msg_.armors[1].type = "small";
+  armors_msg_.armors[1].pose.position.x = get_parameter("outpost_x").as_double();
+  armors_msg_.armors[1].pose.position.y = get_parameter("outpost_y").as_double();
+  armors_msg_.armors[1].pose.position.z = get_parameter("outpost_z").as_double();
+  armors_msg_.armors[1].distance_to_image_center = 200;
+  armors_msg_.armors[1].pose.orientation.x = 0.5;
+  armors_msg_.armors[1].pose.orientation.y = -0.5;
+  armors_msg_.armors[1].pose.orientation.z = 0.5;
+  armors_msg_.armors[1].pose.orientation.w = 0.5;
   armors_pub_->publish(armors_msg_);
+
+  armors_msg_.armors[2].number = "outpost";
+  armors_msg_.armors[2].type = "small";
+  armors_msg_.armors[2].pose.position.x = get_parameter("outpost_x").as_double();
+  armors_msg_.armors[2].pose.position.y = get_parameter("outpost_y").as_double();
+  armors_msg_.armors[2].pose.position.z = get_parameter("outpost_z").as_double();
+  armors_msg_.armors[2].distance_to_image_center = 1000;
+  armors_msg_.armors[2].pose.orientation.x = -0.130526192220051;
+  armors_msg_.armors[2].pose.orientation.y = 0.0;
+  armors_msg_.armors[2].pose.orientation.z = 0.0;
+  armors_msg_.armors[2].pose.orientation.w = 0.99144486137381;
 
   publishMarkers();
 }
@@ -95,6 +117,20 @@ void OutpostDetectorNode::publishMarkers()
   armor_marker_.id = 1;
   armor_marker_.pose = armors_msg_.armors[0].pose;
 
+  marker_array_.markers.emplace_back(armor_marker_);
+
+  armor_marker_.id = 2;
+  armor_marker_.pose = armors_msg_.armors[1].pose;
+  armor_marker_.color.r = 1.0;
+  armor_marker_.color.g = 0.0;
+  armor_marker_.color.b = 0.0;
+  marker_array_.markers.emplace_back(armor_marker_);
+
+  armor_marker_.id = 3;
+  armor_marker_.pose = armors_msg_.armors[2].pose;
+  armor_marker_.color.r = 0.0;
+  armor_marker_.color.g = 1.0;
+  armor_marker_.color.b = 0.0;
   marker_array_.markers.emplace_back(armor_marker_);
 
   direction_marker_.header = armors_msg_.header;
