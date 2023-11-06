@@ -220,6 +220,14 @@ void ArmorTrackerNode::setLatancy(const std_msgs::msg::Float64::SharedPtr latenc
 void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_msg)
 {
 
+  // Print armors
+  RCLCPP_INFO(this->get_logger(), "Armor number: %d", static_cast<int>(armors_msg->armors.size()));
+  for (auto & armor : armors_msg->armors) {
+    RCLCPP_INFO(
+      this->get_logger(), "armor x: %f, y: %f, z: %f", armor.pose.position.x,
+      armor.pose.position.y, armor.pose.position.z);
+  }
+
   // Tranform armor position from image frame to world coordinate
   for (auto & armor : armors_msg->armors) {
     geometry_msgs::msg::PoseStamped ps;

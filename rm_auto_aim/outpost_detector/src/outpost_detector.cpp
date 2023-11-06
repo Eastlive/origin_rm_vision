@@ -21,19 +21,16 @@ OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions& options) : N
 {
   RCLCPP_INFO(this->get_logger(), "Outpost detector node started.");
 
-  roll = declare_parameter("outpost_roll", 0.0);
-  pitch = declare_parameter("outpost_pitch", 0.0);
-  yaw = declare_parameter("outpost_yaw", 0.0);
+  x = declare_parameter("outpost_x", 0.0);
+  y = declare_parameter("outpost_y", 0.0);
+  z = declare_parameter("outpost_z", 2.5);
 
-  roll = roll / 180.0 * M_PI;
-  pitch = pitch / 180.0 * M_PI;
-  yaw = yaw / 180.0 * M_PI;
+  orientation[0] = declare_parameter("orientation_x", -0.6335811);
+  orientation[1] = declare_parameter("orientation_y", 0.6335811);
+  orientation[2] = declare_parameter("orientation_z", 0.0);
+  orientation[3] = declare_parameter("orientation_w", 0.4440158);
 
-  RCLCPP_INFO(this->get_logger(), "outpost_roll: %f", roll);
-  RCLCPP_INFO(this->get_logger(), "outpost_pitch: %f", pitch);
-  RCLCPP_INFO(this->get_logger(), "outpost_yaw: %f", yaw);
-
-  armors_pub_ = this->create_publisher<auto_aim_interfaces::msg::Armors>("/detector/armors", 10);
+  armors_pub_ = this->create_publisher<auto_aim_interfaces::msg::Armors>("/detector/armors", rclcpp::SensorDataQoS());
 
   armor_marker_.ns = "armors";
   armor_marker_.action = visualization_msgs::msg::Marker::ADD;
@@ -59,7 +56,7 @@ OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions& options) : N
   direction_marker_.color.b = 0.0;
   direction_marker_.lifetime = rclcpp::Duration::from_seconds(0.1);
 
-  marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/detector/markers", 10);
+  marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/detector/marker", 10);
 
   timer_ =
     this->create_wall_timer(
@@ -74,25 +71,17 @@ void OutpostDetectorNode::timerCallback()
   armors_msg_.header.frame_id = "camera_optical_link";
   armors_msg_.header.stamp = this->now();
 
-  armors_msg_.armors.resize(2);
+  armors_msg_.armors.resize(1);
   armors_msg_.armors[0].number = "outpost";
   armors_msg_.armors[0].type = "small";
-  armors_msg_.armors[0].distance_to_image_center = 1.0;
-  armors_msg_.armors[0].pose.position.x = 0.0;
-  armors_msg_.armors[0].pose.position.y = 0.0;
-  armors_msg_.armors[0].pose.position.z = 1.0;
-  roll = get_parameter("outpost_roll").as_double() / 180.0 * M_PI;
-  pitch = get_parameter("outpost_pitch").as_double() / 180.0 * M_PI;
-  yaw = get_parameter("outpost_yaw").as_double() / 180.0 * M_PI;
-  RCLCPP_INFO(this->get_logger(), "outpost_roll: %f", roll);
-  RCLCPP_INFO(this->get_logger(), "outpost_pitch: %f", pitch);
-  RCLCPP_INFO(this->get_logger(), "outpost_yaw: %f", yaw);
-  Eigen::Quaterniond quaternion = eulerToQuaternion(roll, pitch, yaw);
-  armors_msg_.armors[0].pose.orientation.x = quaternion.x();
-  armors_msg_.armors[0].pose.orientation.y = quaternion.y();
-  armors_msg_.armors[0].pose.orientation.z = quaternion.z();
-  armors_msg_.armors[0].pose.orientation.w = quaternion.w();
-
+  armors_msg_.armors[0].pose.position.x = get_parameter("outpost_x").as_double();
+  armors_msg_.armors[0].pose.position.y = get_parameter("outpost_y").as_double();
+  armors_msg_.armors[0].pose.position.z = get_parameter("outpost_z").as_double();
+  armors_msg_.armors[0].distance_to_image_center = 600;
+  armors_msg_.armors[0].pose.orientation.x = orientation[0];
+  armors_msg_.armors[0].pose.orientation.y = orientation[1];
+  armors_msg_.armors[0].pose.orientation.z = orientation[2];
+  armors_msg_.armors[0].pose.orientation.w = orientation[3];
   armors_pub_->publish(armors_msg_);
 
   publishMarkers();
@@ -103,13 +92,13 @@ void OutpostDetectorNode::publishMarkers()
   marker_array_.markers.clear();
 
   armor_marker_.header = armors_msg_.header;
-  armor_marker_.id = 0;
+  armor_marker_.id = 1;
   armor_marker_.pose = armors_msg_.armors[0].pose;
 
   marker_array_.markers.emplace_back(armor_marker_);
 
   direction_marker_.header = armors_msg_.header;
-  direction_marker_.id = 0;
+  direction_marker_.id = 1;
   direction_marker_.pose = armors_msg_.armors[0].pose;
 
   marker_array_.markers.emplace_back(direction_marker_);

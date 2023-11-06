@@ -32,9 +32,15 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
   void publishMarkers();
 
+  double x;
+  double y;
+  double z;
+
   double roll;
   double pitch;
   double yaw;
+
+  double orientation[4];
 };
 
 }  // namespace rm_auto_aim
