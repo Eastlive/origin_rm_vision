@@ -17,7 +17,8 @@ Eigen::Quaterniond eulerToQuaternion(double roll, double pitch, double yaw) {
 namespace rm_auto_aim
 {
 
-OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions& options) : Node("outpost_detector", options)
+OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions& options)
+ : Node("outpost_detector", options)
 {
   RCLCPP_INFO(this->get_logger(), "Outpost detector node started.");
 
@@ -30,14 +31,42 @@ OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions& options) : N
   orientation[2] = declare_parameter("orientation_z", 0.43045933457687941);
   orientation[3] = declare_parameter("orientation_w", 0.43045933457687941);
 
-  armors_msg_.armors.resize(3);
-  armors_msg_.armors[2].pose.position.x = outpost_x_;
-  armors_msg_.armors[2].pose.position.y = outpost_y_;
-  armors_msg_.armors[2].pose.position.z = outpost_z_;
-  armors_msg_.armors[2].pose.orientation.x = orientation[0];
-  armors_msg_.armors[2].pose.orientation.y = orientation[1];
-  armors_msg_.armors[2].pose.orientation.z = orientation[2];
-  armors_msg_.armors[2].pose.orientation.w = orientation[3];
+  tf2::Quaternion q(orientation[0], orientation[1], orientation[2], orientation[3]);
+  tf2::Quaternion q_120(0, sin(M_PI / 3), 0, cos(M_PI / 3));
+  armor_msg_[0].number = "outpost";
+  armor_msg_[0].type = "small";
+  armor_msg_[0].distance_to_image_center = sqrt(outpost_x_ * outpost_x_ + outpost_y_ * outpost_y_ + outpost_z_ * outpost_z_) * 200;
+  armor_msg_[0].pose.position.x = outpost_x_;
+  armor_msg_[0].pose.position.y = outpost_y_;
+  armor_msg_[0].pose.position.z = outpost_z_;
+  armor_msg_[0].pose.orientation.x = q.x();
+  armor_msg_[0].pose.orientation.y = q.y();
+  armor_msg_[0].pose.orientation.z = q.z();
+  armor_msg_[0].pose.orientation.w = q.w();
+
+  q = q_120 * q;
+  armor_msg_[1].number = "outpost";
+  armor_msg_[1].type = "small";
+  armor_msg_[1].distance_to_image_center = sqrt(outpost_x_ * outpost_x_ + outpost_y_ * outpost_y_ + outpost_z_ * outpost_z_) * 200;
+  armor_msg_[1].pose.position.x = outpost_x_;
+  armor_msg_[1].pose.position.y = outpost_y_;
+  armor_msg_[1].pose.position.z = outpost_z_;
+  armor_msg_[1].pose.orientation.x = q.x();
+  armor_msg_[1].pose.orientation.y = q.y();
+  armor_msg_[1].pose.orientation.z = q.z();
+  armor_msg_[1].pose.orientation.w = q.w();
+
+  q = q_120 * q;
+  armor_msg_[2].number = "outpost";
+  armor_msg_[2].type = "small";
+  armor_msg_[2].distance_to_image_center = sqrt(outpost_x_ * outpost_x_ + outpost_y_ * outpost_y_ + outpost_z_ * outpost_z_) * 200;
+  armor_msg_[2].pose.position.x = outpost_x_;
+  armor_msg_[2].pose.position.y = outpost_y_;
+  armor_msg_[2].pose.position.z = outpost_z_;
+  armor_msg_[2].pose.orientation.x = q.x();
+  armor_msg_[2].pose.orientation.y = q.y();
+  armor_msg_[2].pose.orientation.z = q.z();
+  armor_msg_[2].pose.orientation.w = q.w();
 
   armors_pub_ = this->create_publisher<auto_aim_interfaces::msg::Armors>("/detector/armors", rclcpp::SensorDataQoS());
 
@@ -48,9 +77,9 @@ OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions& options) : N
   armor_marker_.scale.y = 0.235;
   armor_marker_.scale.z = 0.125;
   armor_marker_.color.a = 1.0;
-  armor_marker_.color.r = 0.0;
-  armor_marker_.color.g = 0.5;
-  armor_marker_.color.b = 1.0;
+  armor_marker_.color.r = 1.0;
+  armor_marker_.color.g = 0.0;
+  armor_marker_.color.b = 0.0;
   armor_marker_.lifetime = rclcpp::Duration::from_seconds(0.1);
 
   direction_marker_.ns = "direction";
@@ -67,6 +96,8 @@ OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions& options) : N
 
   marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/detector/marker", 10);
 
+  now_angle_ = 0;
+
   timer_ =
     this->create_wall_timer(
     std::chrono::milliseconds(30),
@@ -76,44 +107,68 @@ OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions& options) : N
 void OutpostDetectorNode::timerCallback()
 {
   // RCLCPP_INFO(this->get_logger(), "Start Timer Callback!");
-
+  if (now_angle_ >= 400)
+  {
+    now_angle_ = 0;
+  }
 
   armors_msg_.header.frame_id = "camera_optical_link";
   armors_msg_.header.stamp = this->now();
 
-  armors_msg_.armors.resize(3);
-  armors_msg_.armors[0].number = "outpost";
-  armors_msg_.armors[0].type = "small";
-  armors_msg_.armors[0].pose.position.x = get_parameter("outpost_x").as_double();
-  armors_msg_.armors[0].pose.position.y = get_parameter("outpost_y").as_double();
-  armors_msg_.armors[0].pose.position.z = get_parameter("outpost_z").as_double();
-  armors_msg_.armors[0].distance_to_image_center = 600;
-  armors_msg_.armors[0].pose.orientation.x = orientation[0];
-  armors_msg_.armors[0].pose.orientation.y = orientation[1];
-  armors_msg_.armors[0].pose.orientation.z = orientation[2];
-  armors_msg_.armors[0].pose.orientation.w = orientation[3];
-
-  armors_msg_.armors[1].number = "outpost";
-  armors_msg_.armors[1].type = "small";
-  armors_msg_.armors[1].pose.position.x = get_parameter("outpost_x").as_double();
-  armors_msg_.armors[1].pose.position.y = get_parameter("outpost_y").as_double();
-  armors_msg_.armors[1].pose.position.z = get_parameter("outpost_z").as_double();
-  armors_msg_.armors[1].distance_to_image_center = 200;
-  armors_msg_.armors[1].pose.orientation.x = 0.5;
-  armors_msg_.armors[1].pose.orientation.y = -0.5;
-  armors_msg_.armors[1].pose.orientation.z = 0.5;
-  armors_msg_.armors[1].pose.orientation.w = 0.5;
-
-  armors_msg_.armors[2].number = "outpost";
-  armors_msg_.armors[2].type = "small";
-  armors_msg_.armors[2].distance_to_image_center = 1000;
-
   dt_ = this->now().seconds() - last_time_;
   last_time_ = this->now().seconds();
-  RCLCPP_INFO(this->get_logger(), "dt: %f", dt_);
-  RCLCPP_INFO(this->get_logger(), "angle_speed: %f", angle_speed);
-  RCLCPP_INFO(this->get_logger(), "angle_speed * dt_: %f", angle_speed * dt_);
-  rotate(armors_msg_.armors[2].pose, angle_speed * dt_);
+  now_angle_ += angle_speed * dt_;
+
+
+  RCLCPP_INFO(this->get_logger(), "now_angle_: %f", now_angle_);
+  RCLCPP_INFO(this->get_logger(), "now_angle_: %f", now_angle_);
+  RCLCPP_INFO(this->get_logger(), "now_angle_: %f", now_angle_);
+  RCLCPP_INFO(this->get_logger(), "now_angle_: %f", now_angle_);
+  RCLCPP_INFO(this->get_logger(), "now_angle_: %f", now_angle_);
+  RCLCPP_INFO(this->get_logger(), "now_angle_: %f", now_angle_);
+
+  for (int i = 0; i < 3; i++)
+  {
+    rotate(armor_msg_[i].pose, angle_speed * dt_);
+    revolve(armor_msg_[i].pose, i * 2 * M_PI / 3);
+    armor_msg_[i].distance_to_image_center
+      = sqrt(armor_msg_[i].pose.position.x * armor_msg_[i].pose.position.x
+      + armor_msg_[i].pose.position.y * armor_msg_[i].pose.position.y
+      + armor_msg_[i].pose.position.z * armor_msg_[i].pose.position.z
+      ) * 200;
+  }
+
+  armors_msg_.armors.clear();
+
+  if(now_angle_ < M_PI / 2 || now_angle_ > 3 * M_PI / 2)
+  {
+    armors_msg_.armors.emplace_back(armor_msg_[0]);
+    publish_armors_[0] = true;
+  }
+  else
+  {
+    publish_armors_[0] = false;
+  }
+
+  if(now_angle_ < 7 * M_PI / 6 && now_angle_ > M_PI / 6)
+  {
+    armors_msg_.armors.emplace_back(armor_msg_[1]);
+    publish_armors_[1] = true;
+  }
+  else
+  {
+    publish_armors_[1] = false;
+  }
+
+  if(now_angle_ < 11 * M_PI / 6 && now_angle_ > 5 * M_PI / 6)
+  {
+    armors_msg_.armors.emplace_back(armor_msg_[2]);
+    publish_armors_[2] = true;
+  }
+  else
+  {
+    publish_armors_[2] = false;
+  }
 
   armors_pub_->publish(armors_msg_);
 
@@ -131,14 +186,18 @@ void OutpostDetectorNode::rotate(geometry_msgs::msg::Pose & pose, double angle)
   pose.orientation.z = q_pose.z();
   pose.orientation.w = q_pose.w();
 
-  now_angle_ += angle;
-  pose.position.x = outpost_x_ - radius * sin(now_angle_);
+  // 欧拉角
+  tf2::Matrix3x3 m(q_pose);
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+  RCLCPP_INFO(this->get_logger(), "roll: %f, pitch: %f, yaw: %f", roll, pitch, yaw);
+}
+
+void OutpostDetectorNode::revolve(geometry_msgs::msg::Pose & pose, double offset)
+{
+  pose.position.x = outpost_x_ - radius * sin(now_angle_ + offset);
   pose.position.y = outpost_y_;
-  pose.position.z = outpost_z_ - radius * cos(now_angle_);
-  // RCLCPP_INFO(this->get_logger(), "roll: %f, pitch: %f, yaw: %f", roll / M_PI * 180, pitch / M_PI * 180, yaw / M_PI * 180);
-  // RCLCPP_INFO(this->get_logger(), "x: %f, y: %f, z: %f", pose.position.x, pose.position.y, pose.position.z);
-  // RCLCPP_INFO(this->get_logger(), "radius: %f", radius);
-  // RCLCPP_INFO(this->get_logger(), "cos(yaw): %f, sin(yaw): %f", cos(yaw), sin(yaw));
+  pose.position.z = outpost_z_ - radius * cos(now_angle_ + offset);
 }
 
 void OutpostDetectorNode::publishMarkers()
@@ -146,30 +205,32 @@ void OutpostDetectorNode::publishMarkers()
   marker_array_.markers.clear();
 
   armor_marker_.header = armors_msg_.header;
-  armor_marker_.id = 1;
-  armor_marker_.pose = armors_msg_.armors[0].pose;
 
-  marker_array_.markers.emplace_back(armor_marker_);
+  for (int i = 0; i < 3; i++)
+  {
+    armor_marker_.id = i;
+    armor_marker_.pose = armor_msg_[i].pose;
+    if (publish_armors_[i])
+    {
+      armor_marker_.color.r = 1.0;
+      armor_marker_.color.g = 0.0;
+      armor_marker_.color.b = 0.0;
+    }
+    else
+    {
+      armor_marker_.color.r = 0.0;
+      armor_marker_.color.g = 1.0;
+      armor_marker_.color.b = 0.0;
+      armor_marker_.color.a = 0.5;
+    }
+    marker_array_.markers.emplace_back(armor_marker_);
+  }
 
-  armor_marker_.id = 2;
-  armor_marker_.pose = armors_msg_.armors[1].pose;
-  armor_marker_.color.r = 1.0;
-  armor_marker_.color.g = 0.0;
-  armor_marker_.color.b = 0.0;
-  marker_array_.markers.emplace_back(armor_marker_);
+  // direction_marker_.header = armors_msg_.header;
+  // direction_marker_.id = 1;
+  // direction_marker_.pose = armor_msg_[0].pose;
 
-  armor_marker_.id = 3;
-  armor_marker_.pose = armors_msg_.armors[2].pose;
-  armor_marker_.color.r = 0.0;
-  armor_marker_.color.g = 1.0;
-  armor_marker_.color.b = 0.0;
-  marker_array_.markers.emplace_back(armor_marker_);
-
-  direction_marker_.header = armors_msg_.header;
-  direction_marker_.id = 1;
-  direction_marker_.pose = armors_msg_.armors[2].pose;
-
-  marker_array_.markers.emplace_back(direction_marker_);
+  // marker_array_.markers.emplace_back(direction_marker_);
 
   marker_pub_->publish(marker_array_);
 }

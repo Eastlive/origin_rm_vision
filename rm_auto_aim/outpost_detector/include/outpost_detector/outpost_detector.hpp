@@ -20,6 +20,8 @@ public:
 
 private:
   // Detected armors publisher
+  bool publish_armors_[3];
+  auto_aim_interfaces::msg::Armor armor_msg_[3];
   auto_aim_interfaces::msg::Armors armors_msg_;
   rclcpp::Publisher<auto_aim_interfaces::msg::Armors>::SharedPtr armors_pub_;
 
@@ -39,10 +41,11 @@ private:
   double orientation[4];
 
   void rotate(geometry_msgs::msg::Pose & pose, double angle);
+  void revolve(geometry_msgs::msg::Pose & pose, double offset);
 
   const double radius = 0.2765;
   const double angle_speed = 0.8 * M_PI;
-  double now_angle_ = 0;
+  double now_angle_;
 
   double last_time_;
   double dt_;
