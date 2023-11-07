@@ -32,10 +32,17 @@ double TrajectorySlover::calcPitchCompensate(Eigen::Vector3d & point_world)
 {
   //TODO:根据陀螺仪安装位置调整距离求解方式
   //降维，坐标系Y轴以垂直向上为正方向
+
+  // 表示垂直方向上的距离
   auto dist_vertical = point_world[2];
+  
   auto vertical_tmp = dist_vertical;
-  auto dist_horizonal = sqrt(point_world.squaredNorm() - dist_vertical * dist_vertical);
-  //auto dist_horizonal = sqrt(point_world[0] * point_world[0] + point_world[1] * point_world[1]);
+
+  auto theta = atan2(point_world[1], point_world[0]);
+  // 表示水平方向上的距离
+  auto dist_horizonal = sqrt(point_world.squaredNorm() - dist_vertical * dist_vertical); // squaredNorm()表示向量的模的平方
+  // auto dist_horizonal = sqrt(point_world[0] * point_world[0] + point_world[1] * point_world[1]);
+
   // auto dist_vertical = xyz[2];
   // auto dist_horizonal = sqrt(xyz.squaredNorm() - dist_vertical * dist_vertical);
   auto pitch = atan(dist_vertical / dist_horizonal) * 180.0 / PI;
@@ -80,10 +87,16 @@ double TrajectorySlover::calcPitchCompensate(Eigen::Vector3d & point_world)
 
       x += delta_x;
       y += p * delta_x;
+
+      trajectory_.emplace_back(std::make_pair(x, y));
     }
     //评估迭代结果,若小于迭代精度需求则停止迭代
     auto error = dist_vertical - y;
     if (abs(error) <= stop_error_) {
+      for (auto & point : trajectory_) {
+        trajectory_world_.emplace_back(Eigen::Vector3d(point.first * cos(theta),
+          point.first * sin(theta), point.second));
+      }
       break;
     } else {
       vertical_tmp += error;
@@ -91,9 +104,11 @@ double TrajectorySlover::calcPitchCompensate(Eigen::Vector3d & point_world)
       pitch_new = atan(vertical_tmp / dist_horizonal) * 180.0 / PI;
       // std::cout << "iter_i: " << i << " error: " << error << " pitch_new: " << pitch_new
       //           << std::endl;
+      trajectory_.clear();
     }
   }
   // std::cout <<"offset:" << pitch_new-pitch << std::endl <<std::endl ;
+  // 最终输出的值为pitch轴的偏移量，即把枪管向上抬的角度
   return pitch_new - pitch;
 }
 

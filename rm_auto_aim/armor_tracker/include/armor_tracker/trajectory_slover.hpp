@@ -26,8 +26,11 @@ public:
   inline void setBulletSpeed(const double & speed) {bullet_speed_ = speed;}
   inline double getBulletSpeed() {return bullet_speed_;}
 
+  inline std::vector<Eigen::Vector3d> getTrajectoryWorld() {return trajectory_world_;}
+
 private:
-  //function
+  std::vector<std::pair<double, double>> trajectory_;
+  std::vector<Eigen::Vector3d> trajectory_world_;
 
 private:
   //membership

@@ -94,7 +94,7 @@
       max_iter : 10 
       stop_error : 0.001
       R_K_iter : 50
-      init_bullet_speed : 26.5
+      init_bullet_speed : 16.0
       is_hero: true
       static_offset:
         yaw : 0.0
