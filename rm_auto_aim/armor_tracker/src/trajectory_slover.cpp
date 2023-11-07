@@ -30,6 +30,9 @@ TrajectorySlover::TrajectorySlover(
      */
 double TrajectorySlover::calcPitchCompensate(Eigen::Vector3d & point_world)
 {
+  //初始化
+  trajectory_.clear();
+  trajectory_world_.clear();
   //TODO:根据陀螺仪安装位置调整距离求解方式
   //降维，坐标系Y轴以垂直向上为正方向
 
@@ -57,6 +60,8 @@ double TrajectorySlover::calcPitchCompensate(Eigen::Vector3d & point_world)
   for (int i = 0; i < max_iter_; i++) { //迭代次数
     //TODO:可以考虑将迭代起点改为世界坐标系下的枪口位置
     //初始化
+    trajectory_.clear();
+    trajectory_world_.clear();
     auto x = 0.0;
     auto y = 0.0;
     auto p = tan(pitch_new / 180 * PI);  // p = dy / dx
@@ -104,7 +109,6 @@ double TrajectorySlover::calcPitchCompensate(Eigen::Vector3d & point_world)
       pitch_new = atan(vertical_tmp / dist_horizonal) * 180.0 / PI;
       // std::cout << "iter_i: " << i << " error: " << error << " pitch_new: " << pitch_new
       //           << std::endl;
-      trajectory_.clear();
     }
   }
   // std::cout <<"offset:" << pitch_new-pitch << std::endl <<std::endl ;

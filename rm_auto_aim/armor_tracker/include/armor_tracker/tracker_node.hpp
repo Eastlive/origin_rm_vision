@@ -52,7 +52,7 @@ private:
   }
   void armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_ptr);
 
-  void publishMarkers(const auto_aim_interfaces::msg::Target & target_msg);
+  void publishMarkers(const auto_aim_interfaces::msg::Target & target_msg, const std::vector<Eigen::Vector3d> & trajectory_msg);
 
   void setBulletSpeed(const std_msgs::msg::Float64::SharedPtr bulletspeed);
 
@@ -91,6 +91,7 @@ private:
   visualization_msgs::msg::Marker angular_v_marker_;
   visualization_msgs::msg::Marker armor_marker_;
   visualization_msgs::msg::Marker pred_armor_marker_;
+  visualization_msgs::msg::Marker trajectory_marker_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
 
   //gimbal yaw

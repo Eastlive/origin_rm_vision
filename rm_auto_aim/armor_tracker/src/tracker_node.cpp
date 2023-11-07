@@ -164,12 +164,17 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   armor_marker_.scale.z = 0.125;
   armor_marker_.color.a = 1.0;
   armor_marker_.color.r = 1.0;
-  armor_marker_.ns = "pred_armors";
+  pred_armor_marker_.ns = "pred_armors";
   pred_armor_marker_.type = visualization_msgs::msg::Marker::CUBE;
   pred_armor_marker_.scale.x = 0.03;
   pred_armor_marker_.scale.z = 0.125;
   pred_armor_marker_.color.a = 1.0;
   pred_armor_marker_.color.g = 1.0;
+  trajectory_marker_.ns = "trajectory";
+  trajectory_marker_.type = visualization_msgs::msg::Marker::LINE_STRIP;
+  trajectory_marker_.scale.x = 0.01;
+  trajectory_marker_.color.a = 1.0;
+  trajectory_marker_.color.r = 1.0;
   marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/tracker/marker", 10);
 
   //trajectory slover param
@@ -403,6 +408,17 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     //Get offset
     Eigen::Vector2d angel_diff = calcYawAndPitch(armor_target_pitch_link);
     auto trajectory_pitch = (-trajectory_slover_->calcPitchCompensate(armor_target));
+    auto trajectory_view = trajectory_slover_->getTrajectoryWorld();
+
+    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
+    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
+    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
+    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
+    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
+    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
+    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
+    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
+    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
 
     //Set fire permit
     int8_t fire_permit = 0;
@@ -429,17 +445,18 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
       target_pub_->publish(target_msg);
     }
 
-    publishMarkers(target_msg);
+    publishMarkers(target_msg, trajectory_view);
   }
 }
 
-void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & target_msg)
+void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & target_msg, const std::vector<Eigen::Vector3d> & trajectory_msg)
 {
   position_marker_.header = target_msg.header;
   linear_v_marker_.header = target_msg.header;
   angular_v_marker_.header = target_msg.header;
   armor_marker_.header = target_msg.header;
   pred_armor_marker_.header = target_msg.header;
+  trajectory_marker_.header = target_msg.header;
 
   visualization_msgs::msg::MarkerArray marker_array;
   if (target_msg.tracking) {
@@ -559,17 +576,51 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & t
       }
     }
     marker_array.markers.emplace_back(pred_armor_marker_);
+
+    //trajectory visualization
+    trajectory_marker_.action = visualization_msgs::msg::Marker::ADD;
+    trajectory_marker_.points.clear();
+    trajectory_marker_.points.reserve(trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
+    for (const auto & point : trajectory_msg) {
+      geometry_msgs::msg::Point p;
+      p.x = point[0];
+      p.y = point[1];
+      p.z = point[2];
+      trajectory_marker_.points.emplace_back(p);
+    }
+    marker_array.markers.emplace_back(trajectory_marker_);
+    
   } else {
     position_marker_.action = visualization_msgs::msg::Marker::DELETE;
     linear_v_marker_.action = visualization_msgs::msg::Marker::DELETE;
     angular_v_marker_.action = visualization_msgs::msg::Marker::DELETE;
+    trajectory_marker_.action = visualization_msgs::msg::Marker::DELETE;
 
     armor_marker_.action = visualization_msgs::msg::Marker::DELETE;
     pred_armor_marker_.action = visualization_msgs::msg::Marker::DELETE;
-    marker_array.markers.emplace_back(armor_marker_);
-    marker_array.markers.emplace_back(pred_armor_marker_);
   }
 
+  marker_array.markers.emplace_back(armor_marker_);
+  marker_array.markers.emplace_back(pred_armor_marker_);
+  marker_array.markers.emplace_back(trajectory_marker_);
   marker_array.markers.emplace_back(position_marker_);
   marker_array.markers.emplace_back(linear_v_marker_);
   marker_array.markers.emplace_back(angular_v_marker_);
