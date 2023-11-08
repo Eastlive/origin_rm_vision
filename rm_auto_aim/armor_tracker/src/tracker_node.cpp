@@ -144,13 +144,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   position_marker_.scale.x = position_marker_.scale.y = position_marker_.scale.z = 0.1;
   position_marker_.color.a = 1.0;
   position_marker_.color.g = 1.0;
-  linear_v_marker_.type = visualization_msgs::msg::Marker::ARROW;
-  linear_v_marker_.ns = "linear_v";
-  linear_v_marker_.scale.x = 0.03;
-  linear_v_marker_.scale.y = 0.05;
-  linear_v_marker_.color.a = 1.0;
-  linear_v_marker_.color.r = 1.0;
-  linear_v_marker_.color.g = 1.0;
   angular_v_marker_.type = visualization_msgs::msg::Marker::ARROW;
   angular_v_marker_.ns = "angular_v";
   angular_v_marker_.scale.x = 0.03;
@@ -410,16 +403,6 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     auto trajectory_pitch = (-trajectory_slover_->calcPitchCompensate(armor_target));
     auto trajectory_view = trajectory_slover_->getTrajectoryWorld();
 
-    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
-    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
-    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
-    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
-    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
-    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
-    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
-    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
-    RCLCPP_INFO(this->get_logger(), "SHHANGYGANG TRAJECTORY SIZE : %ld", trajectory_view.size());
-
     //Set fire permit
     int8_t fire_permit = 0;
     if (fabs(angel_diff[0]) < fire_permit_thres && tracked_permit) {
@@ -452,7 +435,6 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
 void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & target_msg, const std::vector<Eigen::Vector3d> & trajectory_msg)
 {
   position_marker_.header = target_msg.header;
-  linear_v_marker_.header = target_msg.header;
   angular_v_marker_.header = target_msg.header;
   armor_marker_.header = target_msg.header;
   pred_armor_marker_.header = target_msg.header;
@@ -487,14 +469,10 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & t
     position_marker_.pose.position.y = yc;
     position_marker_.pose.position.z = za + dz / 2;
 
-    linear_v_marker_.action = visualization_msgs::msg::Marker::ADD;
-    linear_v_marker_.points.clear();
-    linear_v_marker_.points.emplace_back(position_marker_.pose.position);
     geometry_msgs::msg::Point arrow_end = position_marker_.pose.position;
     arrow_end.x += vx;
     arrow_end.y += vy;
     arrow_end.z += vz;
-    linear_v_marker_.points.emplace_back(arrow_end);
 
     angular_v_marker_.action = visualization_msgs::msg::Marker::ADD;
     angular_v_marker_.points.clear();
@@ -581,24 +559,6 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & t
     trajectory_marker_.action = visualization_msgs::msg::Marker::ADD;
     trajectory_marker_.points.clear();
     trajectory_marker_.points.reserve(trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
-    RCLCPP_INFO(this->get_logger(), "trajectory size : %ld", trajectory_msg.size());
     for (const auto & point : trajectory_msg) {
       geometry_msgs::msg::Point p;
       p.x = point[0];
@@ -610,20 +570,20 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & t
     
   } else {
     position_marker_.action = visualization_msgs::msg::Marker::DELETE;
-    linear_v_marker_.action = visualization_msgs::msg::Marker::DELETE;
     angular_v_marker_.action = visualization_msgs::msg::Marker::DELETE;
     trajectory_marker_.action = visualization_msgs::msg::Marker::DELETE;
-
     armor_marker_.action = visualization_msgs::msg::Marker::DELETE;
     pred_armor_marker_.action = visualization_msgs::msg::Marker::DELETE;
-  }
+    pred_armor_marker_.points.clear();
 
-  marker_array.markers.emplace_back(armor_marker_);
-  marker_array.markers.emplace_back(pred_armor_marker_);
-  marker_array.markers.emplace_back(trajectory_marker_);
+    marker_array.markers.emplace_back(armor_marker_);
+    marker_array.markers.emplace_back(pred_armor_marker_);
+    marker_array.markers.emplace_back(trajectory_marker_);
+  }
+  
   marker_array.markers.emplace_back(position_marker_);
-  marker_array.markers.emplace_back(linear_v_marker_);
   marker_array.markers.emplace_back(angular_v_marker_);
+
   marker_pub_->publish(marker_array);
 }
 

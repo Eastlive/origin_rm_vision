@@ -87,7 +87,6 @@ private:
 
   // Visualization marker publisher
   visualization_msgs::msg::Marker position_marker_;
-  visualization_msgs::msg::Marker linear_v_marker_;
   visualization_msgs::msg::Marker angular_v_marker_;
   visualization_msgs::msg::Marker armor_marker_;
   visualization_msgs::msg::Marker pred_armor_marker_;
