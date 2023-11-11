@@ -119,6 +119,13 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
   //   target_state(8) = 0.4;
   //   ekf.setState(target_state);
   // }
+  if (target_state(4) < -1.0) {
+    target_state(4) = -0.8 * M_PI;
+    ekf.setState(target_state);
+  } else if (target_state(4) > 1.0) {
+    target_state(4) = 0.8 * M_PI;
+    ekf.setState(target_state);
+  }
 
   // Tracking state machine
   if (tracker_state == DETECTING) {

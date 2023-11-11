@@ -97,11 +97,14 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
       //   0, 0, 0, 0, 0, 0, q_y_y, q_y_vy, 0,
       //   0, 0, 0, 0, 0, 0, q_y_vy, q_vy_vy, 0,
       //   0, 0, 0, 0, 0, 0, 0, 0, q_r;
-      q << 1, 0, 0, 0, 0,
-           0, 1, 0, 0, 0,
-           0, 0, 1, 0, 0,
-           0, 0, 0, 1, 0,
-           0, 0, 0, 0, 1;
+      double t = dt_, x = s2qxyz_, y = s2qyaw_;
+      double q_x_x = pow(t, 4) / 4 * x;
+      double q_y_y = pow(t, 4) / 4 * y, q_y_vy = pow(t, 3) / 2 * x, q_vy_vy = pow(t, 2) * y;
+      q << q_x_x, 0, 0, 0, 0,
+           0, q_x_x, 0, 0, 0,
+           0, 0, q_x_x, 0, 0,
+           0, 0, 0, q_y_y, q_y_vy,
+           0, 0, 0, q_y_vy, q_vy_vy;
       // clang-format on
       return q;
     };
