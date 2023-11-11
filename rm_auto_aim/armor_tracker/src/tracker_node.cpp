@@ -27,6 +27,10 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // state: xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r
   // measurement: xa, ya, za, yaw
   // f - Process function
+  
+  ///////////////
+  /////改动1//////
+  ///////////////
 
   // outpost EKF
   // state: xc, yc, zc, yaw, v_yaw
@@ -78,10 +82,10 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   s2qr_ = declare_parameter("ekf.sigma2_q_r", 800.0);
   auto u_q = [this]() {
       Eigen::MatrixXd q(5, 5);
-      double t = dt_, x = s2qxyz_, y = s2qyaw_, r = s2qr_;
-      double q_x_x = pow(t, 4) / 4 * x, q_x_vx = pow(t, 3) / 2 * x, q_vx_vx = pow(t, 2) * x;
-      double q_y_y = pow(t, 4) / 4 * y, q_y_vy = pow(t, 3) / 2 * x, q_vy_vy = pow(t, 2) * y;
-      double q_r = pow(t, 4) / 4 * r;
+      // double t = dt_, x = s2qxyz_, y = s2qyaw_, r = s2qr_;
+      // double q_x_x = pow(t, 4) / 4 * x, q_x_vx = pow(t, 3) / 2 * x, q_vx_vx = pow(t, 2) * x;
+      // double q_y_y = pow(t, 4) / 4 * y, q_y_vy = pow(t, 3) / 2 * x, q_vy_vy = pow(t, 2) * y;
+      // double q_r = pow(t, 4) / 4 * r;
       // clang-format off
       //    xc      v_xc    yc      v_yc    za      v_za    yaw     v_yaw   r
       // q << q_x_x, q_x_vx, 0, 0, 0, 0, 0, 0, 0,
@@ -115,6 +119,8 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   p0.setIdentity();
   tracker_->ekf = ExtendedKalmanFilter{f, h, j_f, j_h, u_q, u_r, p0};
 
+  ///////////////
+
   // Subscriber with tf2 message_filter
   // tf2 relevant
   tf2_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -137,7 +143,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   info_pub_ = this->create_publisher<auto_aim_interfaces::msg::TrackerInfo>("/tracker/info", 10);
 
   // Publisher
-  target_pub_ = this->create_publisher<auto_aim_interfaces::msg::Target>(
+  target_pub_ = this->create_publisher<auto_aim_interfaces::msg::TargetOutpost>(
     "/tracker/target", rclcpp::SensorDataQoS());
 
   // Visualization Marker Publisher
@@ -269,7 +275,7 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
   }
   // Init message
   auto_aim_interfaces::msg::TrackerInfo info_msg;
-  auto_aim_interfaces::msg::Target target_msg;
+  auto_aim_interfaces::msg::TargetOutpost target_msg; // output message
   rclcpp::Time time = armors_msg->header.stamp;
   target_msg.header.stamp = time;
   target_msg.header.frame_id = target_frame_;
@@ -302,18 +308,11 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
       // Fill target message
       const auto & state = tracker_->target_state;
       target_msg.id = tracker_->tracked_id;
-      target_msg.armors_num = static_cast<int>(tracker_->tracked_armors_num);
       target_msg.position.x = state(0);
-      target_msg.velocity.x = state(1);
-      target_msg.position.y = state(2);
-      target_msg.velocity.y = state(3);
-      target_msg.position.z = state(4);
-      target_msg.velocity.z = state(5);
-      target_msg.yaw = state(6);
-      target_msg.v_yaw = state(7);
-      target_msg.radius_1 = state(8);
-      target_msg.radius_2 = tracker_->another_r;
-      target_msg.dz = tracker_->dz;
+      target_msg.position.y = state(1);
+      target_msg.position.z = state(2);
+      target_msg.yaw = state(3);
+      target_msg.v_yaw = state(4);
     }
   }
 
@@ -326,43 +325,30 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
       target_msg.position.x,
       target_msg.position.y,
       target_msg.position.z);
-    Eigen::Vector3d now_car_vec = Eigen::Vector3d(
-      target_msg.velocity.x,
-      target_msg.velocity.y,
-      target_msg.velocity.z);
     double armor_yaw = target_msg.yaw;
     double car_w = target_msg.v_yaw;
 
-    RCLCPP_INFO(get_logger(), "distance : %lf", (now_car_pos.norm() - target_msg.radius_1));
+    RCLCPP_INFO(get_logger(), "distance : %lf", (now_car_pos.norm() - outpost_radius_));
     RCLCPP_INFO(get_logger(), "speed : %lf", trajectory_slover_->getBulletSpeed());
     //save the pred target
     double pred_dt =
-      fire_latency + latency_ / 1000 + (now_car_pos.norm() - target_msg.radius_1) /
+      fire_latency + latency_ / 1000 + (now_car_pos.norm() - outpost_radius_) /
       trajectory_slover_->getBulletSpeed();
     RCLCPP_INFO(get_logger(), "latency : %lf", latency_ / 1000.0);
-    Eigen::Vector3d pred_car_pos = now_car_pos + now_car_vec * pred_dt;
+    Eigen::Vector3d pred_car_pos = now_car_pos;
     double pred_yaw = armor_yaw + car_w * pred_dt;
     auto car_center_diff = calcYawAndPitch(pred_car_pos);
-    double r1 = target_msg.radius_1, r2 = target_msg.radius_2;
-    double dz = target_msg.dz;
 
     Eigen::Vector3d armor_target_min_dis, armor_target, pred_armor_pos;
     double min_dis_yaw;
     bool is_current_pair = true;
-    size_t a_n = target_msg.armors_num;
+    size_t a_n = 3;
     double min_distance_armor = DBL_MAX;
     double r = 0;
     for (size_t i = 0; i < a_n; i++) {
       double tmp_yaw = pred_yaw + i * (2 * M_PI / a_n);
-      // Only 4 armors has 2 radius and height
-      if (a_n == 4) {
-        r = is_current_pair ? r1 : r2;
-        pred_armor_pos[2] = pred_car_pos[2] + (is_current_pair ? 0 : dz);
-        is_current_pair = !is_current_pair;
-      } else {
-        r = r1;
-        pred_armor_pos[2] = pred_car_pos[2];
-      }
+      r = outpost_radius_;
+      pred_armor_pos[2] = pred_car_pos[2];
       pred_armor_pos[0] = pred_car_pos[0] - r * cos(tmp_yaw);
       pred_armor_pos[1] = pred_car_pos[1] - r * sin(tmp_yaw);
 
@@ -435,7 +421,7 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
   }
 }
 
-void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & target_msg, const std::vector<Eigen::Vector3d> & trajectory_msg)
+void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::TargetOutpost & target_msg, const std::vector<Eigen::Vector3d> & trajectory_msg)
 {
   position_marker_.header = target_msg.header;
   angular_v_marker_.header = target_msg.header;
@@ -445,62 +431,47 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & t
 
   visualization_msgs::msg::MarkerArray marker_array;
   if (target_msg.tracking) {
-    double yaw = target_msg.yaw, r1 = target_msg.radius_1, r2 = target_msg.radius_2;
+    double yaw = target_msg.yaw, r = outpost_radius_;
     double xc = target_msg.position.x, yc = target_msg.position.y, za = target_msg.position.z;
-    double vx = target_msg.velocity.x, vy = target_msg.velocity.y, vz = target_msg.velocity.z;
-    double dz = target_msg.dz;
     double car_w = target_msg.v_yaw;
 
     Eigen::Vector3d now_car_pos = Eigen::Vector3d(
       target_msg.position.x,
       target_msg.position.y,
       target_msg.position.z);
-    Eigen::Vector3d now_car_vec = Eigen::Vector3d(
-      target_msg.velocity.x,
-      target_msg.velocity.y,
-      target_msg.velocity.z);
 
     double pred_dt =
-      fire_latency + latency_ / 1000 + (now_car_pos.norm() - target_msg.radius_1) /
+      fire_latency + latency_ / 1000 + (now_car_pos.norm() - outpost_radius_) /
       trajectory_slover_->getBulletSpeed();
     double pred_yaw = yaw + car_w * pred_dt;
-    Eigen::Vector3d pred_car_pos = now_car_pos + now_car_vec * pred_dt;
+    Eigen::Vector3d pred_car_pos = now_car_pos;
 
 
     position_marker_.action = visualization_msgs::msg::Marker::ADD;
     position_marker_.pose.position.x = xc;
     position_marker_.pose.position.y = yc;
-    position_marker_.pose.position.z = za + dz / 2;
+    position_marker_.pose.position.z = za;
 
-    geometry_msgs::msg::Point arrow_end = position_marker_.pose.position;
-    arrow_end.x += vx;
-    arrow_end.y += vy;
-    arrow_end.z += vz;
 
     angular_v_marker_.action = visualization_msgs::msg::Marker::ADD;
     angular_v_marker_.points.clear();
     angular_v_marker_.points.emplace_back(position_marker_.pose.position);
-    arrow_end = position_marker_.pose.position;
+
+    geometry_msgs::msg::Point arrow_end = position_marker_.pose.position;
     arrow_end.z += target_msg.v_yaw / M_PI;
     angular_v_marker_.points.emplace_back(arrow_end);
 
     armor_marker_.action = visualization_msgs::msg::Marker::ADD;
     armor_marker_.scale.y = tracker_->tracked_armor.type == "small" ? 0.135 : 0.23;
     bool is_current_pair = true;
-    size_t a_n = target_msg.armors_num;
+    size_t a_n = 3;
     geometry_msgs::msg::Point p_a;
     double r = 0;
     for (size_t i = 0; i < a_n; i++) {
       double tmp_yaw = yaw + i * (2 * M_PI / a_n);
       // Only 4 armors has 2 radius and height
-      if (a_n == 4) {
-        r = is_current_pair ? r1 : r2;
-        p_a.z = za + (is_current_pair ? 0 : dz);
-        is_current_pair = !is_current_pair;
-      } else {
-        r = r1;
-        p_a.z = za;
-      }
+      r = outpost_radius_;
+      p_a.z = za;
       p_a.x = xc - r * cos(tmp_yaw);
       p_a.y = yc - r * sin(tmp_yaw);
 
@@ -523,15 +494,8 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & t
     r = 0;
     for (size_t i = 0; i < a_n; i++) {
       double tmp_yaw = pred_yaw + i * (2 * M_PI / a_n);
-      // Only 4 armors has 2 radius and height
-      if (a_n == 4) {
-        r = is_current_pair ? r1 : r2;
-        pred_p_a[2] = pred_car_pos[2] + (is_current_pair ? 0 : dz);
-        is_current_pair = !is_current_pair;
-      } else {
-        r = r1;
-        pred_p_a[2] = pred_car_pos[2];
-      }
+      r = outpost_radius_;
+      pred_p_a[2] = pred_car_pos[2];
       pred_p_a[0] = pred_car_pos[0] - r * cos(tmp_yaw);
       pred_p_a[1] = pred_car_pos[1] - r * sin(tmp_yaw);
 

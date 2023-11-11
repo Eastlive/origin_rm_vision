@@ -27,6 +27,7 @@
 #include "auto_aim_interfaces/msg/armors.hpp"
 #include "auto_aim_interfaces/msg/target.hpp"
 #include "auto_aim_interfaces/msg/tracker_info.hpp"
+#include "auto_aim_interfaces/msg/target_outpost.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "armor_tracker/trajectory_slover.hpp"
 namespace rm_auto_aim
@@ -52,7 +53,7 @@ private:
   }
   void armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_ptr);
 
-  void publishMarkers(const auto_aim_interfaces::msg::Target & target_msg, const std::vector<Eigen::Vector3d> & trajectory_msg);
+  void publishMarkers(const auto_aim_interfaces::msg::TargetOutpost & target_msg, const std::vector<Eigen::Vector3d> & trajectory_msg);
 
   void setBulletSpeed(const std_msgs::msg::Float64::SharedPtr bulletspeed);
 
@@ -83,7 +84,7 @@ private:
   rclcpp::Publisher<auto_aim_interfaces::msg::TrackerInfo>::SharedPtr info_pub_;
 
   // Publisher
-  rclcpp::Publisher<auto_aim_interfaces::msg::Target>::SharedPtr target_pub_;
+  rclcpp::Publisher<auto_aim_interfaces::msg::TargetOutpost>::SharedPtr target_pub_;
 
   // Visualization marker publisher
   visualization_msgs::msg::Marker position_marker_;
@@ -92,6 +93,9 @@ private:
   visualization_msgs::msg::Marker pred_armor_marker_;
   visualization_msgs::msg::Marker trajectory_marker_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
+
+  // outpost radius
+  const double outpost_radius_ = 0.2765;
 
   //gimbal yaw
   double gimbal_yaw;
