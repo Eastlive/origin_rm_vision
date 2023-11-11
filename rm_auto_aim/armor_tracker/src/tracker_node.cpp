@@ -27,50 +27,48 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // state: xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r
   // measurement: xa, ya, za, yaw
   // f - Process function
+
+  // outpost EKF
+  // state: xc, yc, zc, yaw, v_yaw
+  // measurement: xa, ya, za, yaw
+
   auto f = [this](const Eigen::VectorXd & x) {
       Eigen::VectorXd x_new = x;
-      x_new(0) += x(1) * dt_;
-      x_new(2) += x(3) * dt_;
-      x_new(4) += x(5) * dt_;
-      x_new(6) += x(7) * dt_;
+      x_new(3) += x(4) * dt_; // yaw += v_yaw * dt
       return x_new;
     };
   // J_f - Jacobian of process function
   auto j_f = [this](const Eigen::VectorXd &) {
-      Eigen::MatrixXd f(9, 9);
+      Eigen::MatrixXd f(5, 5);
       // clang-format off
-      f << 1, dt_, 0, 0, 0, 0, 0, 0, 0,
-        0, 1, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 1, dt_, 0, 0, 0, 0, 0,
-        0, 0, 0, 1, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 1, dt_, 0, 0, 0,
-        0, 0, 0, 0, 0, 1, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 1, dt_, 0,
-        0, 0, 0, 0, 0, 0, 0, 1, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 1;
+      f << 1, 0, 0, 0, 0,
+           0, 1, 0, 0, 0,
+           0, 0, 1, 0, 0,
+           0, 0, 0, 1, dt_,
+           0, 0, 0, 0, 1;
       // clang-format on
       return f;
     };
   // h - Observation function
   auto h = [](const Eigen::VectorXd & x) {
       Eigen::VectorXd z(4);
-      double xc = x(0), yc = x(2), yaw = x(6), r = x(8);
+      double xc = x(0), yc = x(1), yaw = x(3), r = 0.2765;
       z(0) = xc - r * cos(yaw); // xa
       z(1) = yc - r * sin(yaw); // ya
-      z(2) = x(4);             // za
-      z(3) = x(6);             // yaw
+      z(2) = x(2);             // za
+      z(3) = x(3);             // yaw
       return z;
     };
   // J_h - Jacobian of observation function
   auto j_h = [](const Eigen::VectorXd & x) {
-      Eigen::MatrixXd h(4, 9);
-      double yaw = x(6), r = x(8);
+      Eigen::MatrixXd h(4, 5);
+      double yaw = x(3), r = 0.2765;
       // clang-format off
       //    xc   v_xc yc   v_yc za   v_za yaw         v_yaw r
-      h << 1, 0, 0, 0, 0, 0, r * sin(yaw), 0, -cos(yaw),
-        0, 0, 1, 0, 0, 0, -r * cos(yaw), 0, -sin(yaw),
-        0, 0, 0, 0, 1, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 1, 0, 0;
+      h << 1, 0, 0, r * sin(yaw), 0,
+           0, 1, 0, -r * cos(yaw), 0,
+           0, 0, 1, 0, 0,
+           0, 0, 0, 1, 0;
       // clang-format on
       return h;
     };
@@ -79,22 +77,27 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   s2qyaw_ = declare_parameter("ekf.sigma2_q_yaw", 100.0);
   s2qr_ = declare_parameter("ekf.sigma2_q_r", 800.0);
   auto u_q = [this]() {
-      Eigen::MatrixXd q(9, 9);
+      Eigen::MatrixXd q(5, 5);
       double t = dt_, x = s2qxyz_, y = s2qyaw_, r = s2qr_;
       double q_x_x = pow(t, 4) / 4 * x, q_x_vx = pow(t, 3) / 2 * x, q_vx_vx = pow(t, 2) * x;
       double q_y_y = pow(t, 4) / 4 * y, q_y_vy = pow(t, 3) / 2 * x, q_vy_vy = pow(t, 2) * y;
       double q_r = pow(t, 4) / 4 * r;
       // clang-format off
       //    xc      v_xc    yc      v_yc    za      v_za    yaw     v_yaw   r
-      q << q_x_x, q_x_vx, 0, 0, 0, 0, 0, 0, 0,
-        q_x_vx, q_vx_vx, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, q_x_x, q_x_vx, 0, 0, 0, 0, 0,
-        0, 0, q_x_vx, q_vx_vx, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, q_x_x, q_x_vx, 0, 0, 0,
-        0, 0, 0, 0, q_x_vx, q_vx_vx, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, q_y_y, q_y_vy, 0,
-        0, 0, 0, 0, 0, 0, q_y_vy, q_vy_vy, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, q_r;
+      // q << q_x_x, q_x_vx, 0, 0, 0, 0, 0, 0, 0,
+      //   q_x_vx, q_vx_vx, 0, 0, 0, 0, 0, 0, 0,
+      //   0, 0, q_x_x, q_x_vx, 0, 0, 0, 0, 0,
+      //   0, 0, q_x_vx, q_vx_vx, 0, 0, 0, 0, 0,
+      //   0, 0, 0, 0, q_x_x, q_x_vx, 0, 0, 0,
+      //   0, 0, 0, 0, q_x_vx, q_vx_vx, 0, 0, 0,
+      //   0, 0, 0, 0, 0, 0, q_y_y, q_y_vy, 0,
+      //   0, 0, 0, 0, 0, 0, q_y_vy, q_vy_vy, 0,
+      //   0, 0, 0, 0, 0, 0, 0, 0, q_r;
+      q << 1, 0, 0, 0, 0,
+           0, 1, 0, 0, 0,
+           0, 0, 1, 0, 0,
+           0, 0, 0, 1, 0,
+           0, 0, 0, 0, 1;
       // clang-format on
       return q;
     };
@@ -102,13 +105,13 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   r_xyz_factor = declare_parameter("ekf.r_xyz_factor", 0.05);
   r_yaw = declare_parameter("ekf.r_yaw", 0.02);
   auto u_r = [this](const Eigen::VectorXd & z) {
-      Eigen::DiagonalMatrix<double, 4> r;
+      Eigen::DiagonalMatrix<double, 4> r; // 创建对角矩阵
       double x = r_xyz_factor;
       r.diagonal() << abs(x * z[0]), abs(x * z[1]), abs(x * z[2]), r_yaw;
       return r;
     };
   // P - error estimate covariance matrix
-  Eigen::DiagonalMatrix<double, 9> p0;
+  Eigen::DiagonalMatrix<double, 5> p0;
   p0.setIdentity();
   tracker_->ekf = ExtendedKalmanFilter{f, h, j_f, j_h, u_q, u_r, p0};
 
