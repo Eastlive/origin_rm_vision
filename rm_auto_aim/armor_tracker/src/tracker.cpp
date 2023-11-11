@@ -221,8 +221,8 @@ double Tracker::orientationToYaw(const geometry_msgs::msg::Quaternion & q)
 Eigen::Vector3d Tracker::getArmorPositionFromState(const Eigen::VectorXd & x)
 {
   // Calculate predicted position of the current armor
-  double xc = x(0), yc = x(2), za = x(4);
-  double yaw = x(6), r = x(8);
+  double xc = x(0), yc = x(1), za = x(2);
+  double yaw = x(3), r = outpost_radius;
   double xa = xc - r * cos(yaw);
   double ya = yc - r * sin(yaw);
   return Eigen::Vector3d(xa, ya, za);
