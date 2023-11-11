@@ -81,7 +81,7 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
         if (position_diff < min_position_diff) {
           // Find the closest armor
           min_position_diff = position_diff;
-          yaw_diff = abs(orientationToYaw(armor.pose.orientation) - ekf_prediction(6));
+          yaw_diff = abs(orientationToYaw(armor.pose.orientation) - ekf_prediction(4));
           tracked_armor = armor;
         }
       }
@@ -112,13 +112,13 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
   }
 
   // Prevent radius from spreading
-  if (target_state(8) < 0.12) {
-    target_state(8) = 0.12;
-    ekf.setState(target_state);
-  } else if (target_state(8) > 0.4) {
-    target_state(8) = 0.4;
-    ekf.setState(target_state);
-  }
+  // if (target_state(8) < 0.12) {
+  //   target_state(8) = 0.12;
+  //   ekf.setState(target_state);
+  // } else if (target_state(8) > 0.4) {
+  //   target_state(8) = 0.4;
+  //   ekf.setState(target_state);
+  // }
 
   // Tracking state machine
   if (tracker_state == DETECTING) {
