@@ -78,8 +78,8 @@
     debug: false
 
     ekf:
-      sigma2_q_xyz: 0.005
-      sigma2_q_yaw: 1.0
+      sigma2_q_xyz: 0.05
+      sigma2_q_yaw: 5.0
       sigma2_q_r: 80.0
 
       r_xyz_factor: 0.0004
@@ -90,7 +90,7 @@
       max_match_yaw_diff: 1.0
 
       tracking_thres: 5
-      lost_time_thres: 3.0
+      lost_time_thres: 4.0
 
     trajectory:
       max_iter : 10 

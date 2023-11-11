@@ -81,7 +81,7 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
         if (position_diff < min_position_diff) {
           // Find the closest armor
           min_position_diff = position_diff;
-          yaw_diff = abs(orientationToYaw(armor.pose.orientation) - ekf_prediction(4));
+          yaw_diff = abs(orientationToYaw(armor.pose.orientation) - ekf_prediction(3));
           tracked_armor = armor;
         }
       }
@@ -119,13 +119,13 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
   //   target_state(8) = 0.4;
   //   ekf.setState(target_state);
   // }
-  if (target_state(4) < -1.0) {
-    target_state(4) = -0.8 * M_PI;
-    ekf.setState(target_state);
-  } else if (target_state(4) > 1.0) {
-    target_state(4) = 0.8 * M_PI;
-    ekf.setState(target_state);
-  }
+  // if (target_state(4) < -1.0) {
+  //   target_state(4) = -0.8 * M_PI;
+  //   ekf.setState(target_state);
+  // } else if (target_state(4) > 1.0) {
+  //   target_state(4) = 0.8 * M_PI;
+  //   ekf.setState(target_state);
+  // }
 
   // Tracking state machine
   if (tracker_state == DETECTING) {
@@ -155,6 +155,21 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
       tracker_state = TRACKING;
       lost_count_ = 0;
     }
+  }
+  
+  switch(tracker_state) {
+    case DETECTING:
+      RCLCPP_INFO(rclcpp::get_logger("armor_tracker"), "Detecting");
+      break;
+    case TRACKING:
+      RCLCPP_INFO(rclcpp::get_logger("armor_tracker"), "Tracking");
+      break;
+    case TEMP_LOST:
+      RCLCPP_INFO(rclcpp::get_logger("armor_tracker"), "Temp lost");
+      break;
+    case LOST:
+      RCLCPP_INFO(rclcpp::get_logger("armor_tracker"), "Lost");
+      break;
   }
 }
 
