@@ -12,6 +12,8 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
 {
   RCLCPP_INFO(this->get_logger(), "Starting TrackerNode!");
 
+  tracker_debug_ = this->declare_parameter("debug", false);
+
   // Maximum allowable armor distance in the XOY plane
   max_armor_distance_ = this->declare_parameter("max_armor_distance", 10.0);
 
@@ -231,13 +233,14 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
 {
 
   // Print armors
-  RCLCPP_INFO(this->get_logger(), "Armor number: %d", static_cast<int>(armors_msg->armors.size()));
-  for (auto & armor : armors_msg->armors) {
-    RCLCPP_INFO(
-      this->get_logger(), "armor x: %f, y: %f, z: %f", armor.pose.position.x,
-      armor.pose.position.y, armor.pose.position.z);
+  if(tracker_debug_) {
+    RCLCPP_INFO(this->get_logger(), "Armor number: %d", static_cast<int>(armors_msg->armors.size()));
+    for (auto & armor : armors_msg->armors) {
+      RCLCPP_INFO(
+        this->get_logger(), "armor x: %f, y: %f, z: %f", armor.pose.position.x,
+        armor.pose.position.y, armor.pose.position.z);
+    }
   }
-
   // Tranform armor position from image frame to world coordinate
   for (auto & armor : armors_msg->armors) {
     geometry_msgs::msg::PoseStamped ps;
@@ -331,13 +334,18 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     double armor_yaw = target_msg.yaw;
     double car_w = target_msg.v_yaw;
 
-    RCLCPP_INFO(get_logger(), "distance : %lf", (now_car_pos.norm() - outpost_radius_));
-    RCLCPP_INFO(get_logger(), "speed : %lf", trajectory_slover_->getBulletSpeed());
+    if(tracker_debug_) {
+      RCLCPP_INFO(get_logger(), "distance : %lf", (now_car_pos.norm() - outpost_radius_));
+      RCLCPP_INFO(get_logger(), "speed : %lf", trajectory_slover_->getBulletSpeed());
+    }
     //save the pred target
     double pred_dt =
       fire_latency + latency_ / 1000 + (now_car_pos.norm() - outpost_radius_) /
       trajectory_slover_->getBulletSpeed();
-    RCLCPP_INFO(get_logger(), "latency : %lf", latency_ / 1000.0);
+    
+    if(tracker_debug_) {
+      RCLCPP_INFO(get_logger(), "latency : %lf", latency_ / 1000.0);
+    }
     Eigen::Vector3d pred_car_pos = now_car_pos;
     double pred_yaw = armor_yaw + car_w * pred_dt;
     auto car_center_diff = calcYawAndPitch(pred_car_pos);
@@ -405,15 +413,18 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     target_msg.offset_pitch = rad2deg((double)angel_diff(1)) + trajectory_pitch +
       static_offset_pitch_;
 
-    RCLCPP_INFO(this->get_logger(), "trajectory_pitch : %lf", trajectory_pitch);
-    RCLCPP_INFO(
-      this->get_logger(), "offset_pitch : %lf , offset_yaw : %lf", target_msg.offset_pitch,
-      target_msg.offset_yaw);
 
-    //RCLCPP_INFO(this->get_logger(), "yaw_angle_thres : %lf", yaw_angle_thres);
-    //RCLCPP_INFO(this->get_logger(), "fire_permit_thres : %lf", fire_permit_thres);
-    //RCLCPP_INFO(this->get_logger(), "fire_latency : %lf", fire_latency);
-    RCLCPP_INFO(this->get_logger(), "fire_permit : %d", fire_permit);
+    if(tracker_debug_) {
+      RCLCPP_INFO(this->get_logger(), "trajectory_pitch : %lf", trajectory_pitch);
+      RCLCPP_INFO(
+        this->get_logger(), "offset_pitch : %lf , offset_yaw : %lf", target_msg.offset_pitch,
+        target_msg.offset_yaw);
+
+      //RCLCPP_INFO(this->get_logger(), "yaw_angle_thres : %lf", yaw_angle_thres);
+      //RCLCPP_INFO(this->get_logger(), "fire_permit_thres : %lf", fire_permit_thres);
+      //RCLCPP_INFO(this->get_logger(), "fire_latency : %lf", fire_latency);
+      RCLCPP_INFO(this->get_logger(), "fire_permit : %d", fire_permit);
+    }
 
     if (!(isnan(target_msg.offset_yaw) || isnan(target_msg.offset_pitch))) {
       target_pub_->publish(target_msg);

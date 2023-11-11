@@ -116,6 +116,8 @@ private:
 
   //Subscriber latency
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr latency_sub_;
+
+  bool tracker_debug_;
 };
 
 }  // namespace rm_auto_aim

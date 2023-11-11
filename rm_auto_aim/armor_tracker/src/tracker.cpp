@@ -201,11 +201,11 @@ void Tracker::handleArmorJump(const Armor & current_armor)
   Eigen::Vector3d infer_p = getArmorPositionFromState(target_state);
   if ((current_p - infer_p).norm() > max_match_distance_) {
     double r = outpost_radius;
-    double v_yaw = target_state(4);
+    // double v_yaw = target_state(4);
     target_state(0) = p.x + r * cos(yaw);  // xc
     target_state(1) = p.y + r * sin(yaw);  // yc
     target_state(2) = p.z;                 // za
-    target_state(4) = v_yaw;               // v_yaw
+    target_state(4) = 0;               // v_yaw
     RCLCPP_ERROR(rclcpp::get_logger("armor_tracker"), "Reset State!");
   }
 

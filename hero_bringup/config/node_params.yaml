@@ -75,9 +75,11 @@
     fire_latency: 0.03
     min_speed: 12.0
 
+    debug: false
+
     ekf:
-      sigma2_q_xyz: 0.05
-      sigma2_q_yaw: 5.0
+      sigma2_q_xyz: 0.005
+      sigma2_q_yaw: 1.0
       sigma2_q_r: 80.0
 
       r_xyz_factor: 0.0004

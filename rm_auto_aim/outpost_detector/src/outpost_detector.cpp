@@ -113,7 +113,7 @@ void OutpostDetectorNode::timerCallback()
   dt_ = this->now().seconds() - last_time_;
   last_time_ = this->now().seconds();
   now_angle_ += angle_speed * dt_;
-  RCLCPP_INFO(this->get_logger(), "now_angle_: %lf", now_angle_);
+  // RCLCPP_INFO(this->get_logger(), "now_angle_: %lf", now_angle_);
 
   rotate(armor_msg_[0].pose, angle_speed * dt_);
   revolve(armor_msg_[0].pose, 0);
