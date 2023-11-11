@@ -341,7 +341,6 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
 
     Eigen::Vector3d armor_target_min_dis, armor_target, pred_armor_pos;
     double min_dis_yaw;
-    bool is_current_pair = true;
     size_t a_n = 3;
     double min_distance_armor = DBL_MAX;
     double r = 0;
@@ -431,7 +430,7 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::TargetOutp
 
   visualization_msgs::msg::MarkerArray marker_array;
   if (target_msg.tracking) {
-    double yaw = target_msg.yaw, r = outpost_radius_;
+    double yaw = target_msg.yaw;
     double xc = target_msg.position.x, yc = target_msg.position.y, za = target_msg.position.z;
     double car_w = target_msg.v_yaw;
 
@@ -463,7 +462,6 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::TargetOutp
 
     armor_marker_.action = visualization_msgs::msg::Marker::ADD;
     armor_marker_.scale.y = tracker_->tracked_armor.type == "small" ? 0.135 : 0.23;
-    bool is_current_pair = true;
     size_t a_n = 3;
     geometry_msgs::msg::Point p_a;
     double r = 0;
@@ -487,7 +485,6 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::TargetOutp
     pred_armor_marker_.action = visualization_msgs::msg::Marker::ADD;
     pred_armor_marker_.points.clear();
     pred_armor_marker_.scale.y = tracker_->tracked_armor.type == "small" ? 0.135 : 0.23;
-    is_current_pair = true;
     Eigen::Vector3d pred_p_a;
     geometry_msgs::msg::Point target_p_a;
     double min_distance_armor = DBL_MAX;
