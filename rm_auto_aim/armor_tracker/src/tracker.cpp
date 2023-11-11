@@ -160,12 +160,11 @@ void Tracker::initEKF(const Armor & a)
   double yaw = orientationToYaw(a.pose.orientation);
 
   // Set initial position at 0.2m behind the target
-  target_state = Eigen::VectorXd::Zero(9);
-  double r = 0.26;
+  target_state = Eigen::VectorXd::Zero(5);
+  double r = 0.2765;
   double xc = xa + r * cos(yaw);
   double yc = ya + r * sin(yaw);
-  dz = 0, another_r = r;
-  target_state << xc, 0, yc, 0, za, 0, yaw, 0, r;
+  target_state << xc, yc, za, yaw, 0;
 
   ekf.setState(target_state);
 }
