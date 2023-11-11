@@ -21,7 +21,7 @@ Tracker::Tracker(double max_match_distance, double max_match_yaw_diff)
 : tracker_state(LOST),
   tracked_id(std::string("")),
   measurement(Eigen::VectorXd::Zero(4)),
-  target_state(Eigen::VectorXd::Zero(9)),
+  target_state(Eigen::VectorXd::Zero(5)),
   max_match_distance_(max_match_distance),
   max_match_yaw_diff_(max_match_yaw_diff)
 {
