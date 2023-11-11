@@ -183,14 +183,8 @@ void Tracker::updateArmorsNum(const Armor & armor)
 void Tracker::handleArmorJump(const Armor & current_armor)
 {
   double yaw = orientationToYaw(current_armor.pose.orientation);
-  target_state(6) = yaw;
+  target_state(3) = yaw;
   updateArmorsNum(current_armor);
-  // Only 4 armors has 2 radius and height
-  if (tracked_armors_num == ArmorsNum::NORMAL_4) {
-    dz = target_state(4) - current_armor.pose.position.z;
-    target_state(4) = current_armor.pose.position.z;
-    std::swap(target_state(8), another_r);
-  }
   RCLCPP_WARN(rclcpp::get_logger("armor_tracker"), "Armor jump!");
 
   // If position difference is larger than max_match_distance_,
@@ -199,13 +193,12 @@ void Tracker::handleArmorJump(const Armor & current_armor)
   Eigen::Vector3d current_p(p.x, p.y, p.z);
   Eigen::Vector3d infer_p = getArmorPositionFromState(target_state);
   if ((current_p - infer_p).norm() > max_match_distance_) {
-    double r = target_state(8);
+    double r = outpost_radius;
+    double v_yaw = target_state(4);
     target_state(0) = p.x + r * cos(yaw);  // xc
-    target_state(1) = 0;                   // vxc
-    target_state(2) = p.y + r * sin(yaw);  // yc
-    target_state(3) = 0;                   // vyc
-    target_state(4) = p.z;                 // za
-    target_state(5) = 0;                   // vza
+    target_state(1) = p.y + r * sin(yaw);  // yc
+    target_state(2) = p.z;                 // za
+    target_state(4) = v_yaw;               // v_yaw
     RCLCPP_ERROR(rclcpp::get_logger("armor_tracker"), "Reset State!");
   }
 

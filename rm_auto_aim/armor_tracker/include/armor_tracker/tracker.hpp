@@ -60,8 +60,7 @@ public:
 
   Eigen::VectorXd target_state;
 
-  // To store another pair of armors message
-  double dz, another_r;
+  const double outpost_radius = 0.2765;
 
 private:
   void initEKF(const Armor & a);
